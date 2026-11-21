@@ -9,6 +9,8 @@ public record AppConfig
     public string? SelectedModel { get; init; } = "gemini-2.0-flash";
     public string? GeminiCustomBaseUrl { get; init; }
     public string? OpenAiCustomBaseUrl { get; init; }
+    public string? LinkedInProfileUrl { get; init; }
+    public string? LinkedInProfileText { get; init; }
     public bool TelemetryEnabled { get; init; } = false;
     public string DataDirectory { get; init; } = "";
     public DateTime LastUpdated { get; init; } = DateTime.UtcNow;

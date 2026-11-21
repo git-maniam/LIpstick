@@ -28,6 +28,14 @@
                 </Button>
             </Grid>
 
+            <Border Background="#E5EEFF" BorderBrush="#CCDDFE" BorderThickness="1" CornerRadius="12" Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Profile snapshot" FontSize="16" FontWeight="SemiBold" Foreground="#14264F" />
+                    <TextBlock Text="Open your saved profile URL in LinkedIn, copy the profile sections, and paste them here. LinkedIn does not allow third-party automated profile scraping. Your snapshot is stored locally; paste an updated copy before each new scan." TextWrapping="Wrap" FontSize="13" Foreground="#30466D" />
+                    <TextBox Header="Profile text" PlaceholderText="Paste the visible profile text here, including About, Experience, Education, and Skills sections" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="130" MaxHeight="220" ScrollViewer.VerticalScrollBarVisibility="Auto" Text="{x:Bind ViewModel.ProfileTextInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+            </Border>
+
             <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="16" Padding="24">
                 <Grid ColumnSpacing="28">
                     <Grid.ColumnDefinitions>

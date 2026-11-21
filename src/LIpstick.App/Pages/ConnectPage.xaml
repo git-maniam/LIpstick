@@ -49,17 +49,17 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                             <Border Background="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="14" Padding="10,5">
-                                <TextBlock Text="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                                <TextBlock Text="Profile setup" Foreground="White" FontSize="11" FontWeight="SemiBold" />
                             </Border>
-                            <Button Content="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToDisconnectButtonTextConverter}}" Command="{x:Bind ViewModel.ToggleLinkedInConnectionCommand}" MinWidth="92" />
+                            <Button Content="Open LinkedIn Login" Command="{x:Bind ViewModel.ToggleLinkedInConnectionCommand}" MinWidth="150" />
                         </StackPanel>
-                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnSpacing="10" Visibility="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Header="LinkedIn Client ID" PlaceholderText="Client ID from your LinkedIn developer app" Text="{x:Bind ViewModel.LinkedInClientId, Mode=TwoWay}" />
-                            <Button Grid.Column="1" Content="Save Client ID" Command="{x:Bind ViewModel.SaveLinkedInCredentialsCommand}" VerticalAlignment="Bottom" />
+                            <TextBox Header="Your LinkedIn profile URL" PlaceholderText="https://www.linkedin.com/in/your-name/" Text="{x:Bind ViewModel.LinkedInProfileUrl, Mode=TwoWay}" />
+                            <Button Grid.Column="1" Content="Save Profile URL" Command="{x:Bind ViewModel.SaveLinkedInProfileUrlCommand}" VerticalAlignment="Bottom" />
                         </Grid>
                     </Grid>
                 </Border>

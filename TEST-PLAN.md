@@ -25,16 +25,16 @@ This plan converts `SPEC.md`, the API contracts, wireframes, data files, and the
 | ST-01 | Corrupt or truncate `config.json`, `voice.md`, `plan.md`, or `history.json`, then restart. | App recovers with defaults, preserves valid records where possible, reports the affected file, and never crashes. |
 | ST-02 | Invoke Clear Local Data and cancel, then confirm. | Cancel changes nothing; confirmation removes only documented local artifacts and reports exactly what was removed. |
 
-### LinkedIn connection and profile ingest (issue #2)
+### LinkedIn browser login and user-provided profile snapshots (issue #2)
 
 | ID | Preconditions and steps | Expected result |
 |---|---|---|
-| LI-01 | Start mocked OAuth, complete callback with valid authorization, close and reopen app. | Connection is restored from secure storage; title badge shows avatar, name, headline, and Connected. |
-| LI-02 | Return invalid callback/state, deny consent, or close WebView2. | No credential is stored; user sees a specific recoverable error and remains disconnected. |
-| LI-03 | Simulate token expiry, refresh success, and refresh failure. | Badge transitions Token Expiring then Connected on success; failure clears session safely and offers reconnect. |
-| LI-04 | Trigger timeout, cancellation, 429, 500, and offline responses. | Polly policy respects cancellation and retry limits; UI reports actionable status without duplicate writes or unobserved exceptions. |
-| LI-05 | Scan a fixture containing headline, about, experience, featured, skills, and identity fields. | Normalized DTO contains all fields with stable IDs and preserves null/empty distinctions. |
-| LI-06 | Inspect config/logs after sign-in and scan. | Tokens, cookies, keys, and private text are absent or redacted; secrets exist only in PasswordVault/DPAPI. |
+| LI-01 | Click Open LinkedIn Login on a Windows desktop. | The default browser opens `https://www.linkedin.com/login`; browser credential management remains in control. |
+| LI-02 | Enter valid and invalid profile URLs and restart the app. | Only LinkedIn member URLs are accepted and valid URLs persist locally. |
+| LI-03 | Paste a profile snapshot with headline, About, Experience, Education, and Skills, then scan. | The app parses available sections, evaluates the snapshot, and preserves source text without invented identity fields. |
+| LI-04 | Paste an updated snapshot after changing profile text and scan again. | The new local snapshot replaces the prior scan input and yields updated profile values/scores. |
+| LI-05 | Inspect app config and secure storage. | No LinkedIn password, cookie, or browser token is collected or stored; profile URL and text remain local. |
+| LI-06 | Trigger Apply on a recommendation. | LIpstick never claims to write to LinkedIn; user is told to apply manually and rescan a fresh snapshot. |
 
 ### AI providers and generation (issue #3)
 

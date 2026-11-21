@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
+using LIpstick.Infrastructure.LinkedIn;
 
 namespace LIpstick_App.ViewModels;
 
@@ -11,6 +12,7 @@ public partial class ConnectViewModel : ObservableObject
     private readonly ISecureStorageService _secureStorage;
     private readonly ShellViewModel _shellViewModel;
     private readonly IAIHubService _aiHub;
+    private readonly ILocalDataService _dataService;
 
     [ObservableProperty]
     private string _linkedInUser = "Not connected";
@@ -22,10 +24,10 @@ public partial class ConnectViewModel : ObservableObject
     private bool _isLinkedInConnected;
 
     [ObservableProperty]
-    private string _linkedInStatusMessage = "Configure your LinkedIn developer app to connect.";
+    private string _linkedInStatusMessage = "Sign in through your browser and save your profile URL.";
 
     [ObservableProperty]
-    private string _linkedInClientId = "";
+    private string _linkedInProfileUrl = "";
 
     [ObservableProperty]
     private string _geminiApiKey = "";
@@ -49,23 +51,35 @@ public partial class ConnectViewModel : ObservableObject
         ILinkedInClient linkedInClient,
         ISecureStorageService secureStorage,
         ShellViewModel shellViewModel,
-        IAIHubService aiHub)
+        IAIHubService aiHub,
+        ILocalDataService dataService)
     {
         _linkedInClient = linkedInClient;
         _secureStorage = secureStorage;
         _shellViewModel = shellViewModel;
         _aiHub = aiHub;
+        _dataService = dataService;
     }
 
     public async Task InitializeAsync()
     {
+        // Remove credentials from the retired developer-app flow; LIpstick no longer uses them.
+        foreach (var key in new[]
+        {
+            "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET", "LINKEDIN_ACCESS_TOKEN",
+            "LINKEDIN_REFRESH_TOKEN", "LINKEDIN_MEMBER_ID", "LINKEDIN_TOKEN_EXPIRY",
+            "LINKEDIN_FULL_NAME", "LINKEDIN_HEADLINE", "LINKEDIN_AVATAR_URL"
+        })
+            await _secureStorage.DeleteSecretAsync(key);
+
         var session = await _linkedInClient.GetSessionInfoAsync();
+        LinkedInProfileUrl = (await _dataService.LoadConfigAsync()).LinkedInProfileUrl ?? "";
         IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
         LinkedInStatusMessage = session.StatusMessage ?? (IsLinkedInConnected ? "Connected" : "Not connected.");
         if (IsLinkedInConnected)
         {
-            LinkedInUser = session.FullName ?? "Connected Member";
-            LinkedInHeadline = session.Headline ?? "Profile identity connected; headline is unavailable with the granted LinkedIn permissions.";
+                LinkedInUser = session.FullName ?? "Profile URL saved";
+                LinkedInHeadline = session.Headline ?? "Use your browser login, then provide a profile snapshot in Scanner.";
         }
 
         IsGeminiConnected = await _secureStorage.HasSecretAsync("GEMINI_API_KEY");
@@ -80,24 +94,9 @@ public partial class ConnectViewModel : ObservableObject
     {
         try
         {
-            if (IsLinkedInConnected)
-            {
-                await _linkedInClient.DisconnectAsync();
-                IsLinkedInConnected = false;
-                LinkedInUser = "Disconnected";
-                LinkedInHeadline = "Connect your profile to scan and optimize.";
-            }
-            else
-            {
-                var session = await _linkedInClient.ConnectAsync();
-                IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
-                LinkedInStatusMessage = session.StatusMessage ?? (IsLinkedInConnected ? "Connected" : "Not connected.");
-                if (IsLinkedInConnected)
-                {
-                    LinkedInUser = session.FullName ?? "Connected Member";
-                    LinkedInHeadline = session.Headline ?? "Profile identity connected; headline is unavailable with the granted LinkedIn permissions.";
-                }
-            }
+            var session = await _linkedInClient.ConnectAsync();
+            IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
+            LinkedInStatusMessage = session.StatusMessage ?? "LinkedIn opened in your default browser.";
             await _shellViewModel.InitializeAsync();
         }
         catch (OperationCanceledException)
@@ -115,17 +114,22 @@ public partial class ConnectViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public async Task SaveLinkedInCredentialsAsync()
+    public async Task SaveLinkedInProfileUrlAsync()
     {
-        if (string.IsNullOrWhiteSpace(LinkedInClientId))
+        var value = LinkedInProfileUrl.Trim();
+        if (!BrowserLinkedInProfileClient.IsProfileUrl(value))
         {
-            LinkedInStatusMessage = "Enter the LinkedIn Client ID.";
+            LinkedInStatusMessage = "Enter a profile URL like https://www.linkedin.com/in/your-name/.";
             return;
         }
 
-        await _secureStorage.StoreSecretAsync("LINKEDIN_CLIENT_ID", LinkedInClientId.Trim());
-        await _secureStorage.DeleteSecretAsync("LINKEDIN_CLIENT_SECRET");
-        LinkedInStatusMessage = "Client ID saved. Request native OAuth PKCE enablement for your LinkedIn app before connecting.";
+        var config = await _dataService.LoadConfigAsync();
+        await _dataService.SaveConfigAsync(config with { LinkedInProfileUrl = value });
+        LinkedInProfileUrl = value;
+        IsLinkedInConnected = true;
+        LinkedInUser = "Profile URL saved";
+        LinkedInStatusMessage = "Profile URL saved. Paste your profile text in Scanner to create a scan snapshot.";
+        await _shellViewModel.InitializeAsync();
     }
 
     [RelayCommand]

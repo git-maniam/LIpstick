@@ -46,4 +46,8 @@ public record LinkedInProfile(
     int RecommendationsCount,
     DateTime? LastPostDate,
     bool HasCreatorMode
-);
+)
+{
+    /// <summary>Complete user-provided profile text for provenance and future processing.</summary>
+    public string? SourceSnapshotText { get; init; }
+}

@@ -15,7 +15,7 @@
 See [`../Connections-Content-History-Settings.png`](../Connections-Content-History-Settings.png) for the approved visual direction for Connections, Content Lab, History, and Settings. It complements `Scanner.png` and `Improve.png`.
 
 ### 2. Connect Tab (`/connect`)
-- Persistent sidebar shows LinkedIn, OpenAI, and Gemini connection states.
+- Persistent sidebar shows LinkedIn profile-setup state plus OpenAI and Gemini connection states.
 - Three provider cards show concise purpose, Connected/Disconnected status, and connect/disconnect action.
 - Explain that at least one AI provider must be connected to populate the model selector.
 
@@ -33,7 +33,7 @@ See [`../Connections-Content-History-Settings.png`](../Connections-Content-Histo
 - Confirm destructive data deletion and explain what will be removed.
 
 ### Persistent Sidebar Account Controls
-Every screen includes persistent sidebar controls for **Login to LinkedIn**, **OpenAI Login**, and **Gemini Login**. Each shows **Connected** or **Disconnected** status, with pending/error states during sign-in. These remain accessible in collapsed navigation. LinkedIn connection gates profile scanning and applying changes. The model selector lists available models only for connected AI providers; with neither provider connected, it is disabled and prompts the user to connect OpenAI or Gemini.
+Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemini. LinkedIn opens the default browser login page and shows profile-setup status; the browser manages any remembered login. Scanner uses a locally saved user-provided profile snapshot. The user pastes a refreshed snapshot after editing LinkedIn; LIpstick does not scrape or apply edits. The model selector lists models only for connected AI providers.
 
 ### 1. Navigation Shell
 ```text
@@ -53,7 +53,7 @@ Every screen includes persistent sidebar controls for **Login to LinkedIn**, **O
 
 ### 2. Connect Tab (`/connect`)
 - Three cards:
-  1. **LinkedIn Account Connection Card**: Sign-in with LinkedIn (OAuth 2.0 / WebView2 session), shows current user name, avatar, connection state.
+  1. **LinkedIn Profile Setup Card**: Default-browser login action, saved profile URL field, and profile snapshot instructions.
   2. **Google Gemini Connection Card**: Sign-in with Google or API Key input, displays account quota and available models (`Gemini 2.5 Flash`, `Gemini 2.0 Flash`, `Gemini 1.5 Pro`).
   3. **OpenAI Connection Card**: API Key input, model list (`GPT-4o`, `o3-mini`).
 

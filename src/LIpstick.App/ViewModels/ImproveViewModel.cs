@@ -168,7 +168,7 @@ public partial class ImproveViewModel : ObservableObject
         }
         else if (result.Outcome == UpdateOutcome.Unsupported)
         {
-            StatusMessage = "ℹ Copied to clipboard! LinkedIn edit page opened in browser.";
+            StatusMessage = result.Message ?? "Copy the reviewed text into LinkedIn manually, then scan an updated profile snapshot.";
         }
         else
         {

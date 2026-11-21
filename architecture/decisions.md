@@ -24,14 +24,11 @@ LIpstick bridges personal LinkedIn optimization with multi-provider generative A
 - **Target Architecture:** `win-x64` (primary), `win-arm64` supported.
 - **UI & Materials:** Fluent Design System, Mica backdrop with fallback to solid background on downlevel builds, Acrylic flyouts, 8–12px corner radii, Segoe UI Variable typography.
 
-### 2.2 LinkedIn Authentication & Profile Synchronization Feasibility
-- **Authentication:** Native desktop OAuth using the system browser, loopback redirect, and PKCE (S256). LinkedIn must enable native PKCE for the registered application. Do not embed LinkedIn authentication in WebView2 or ship a shared client secret.
-- **Write-Back Reality & Policy:** Official public LinkedIn Member APIs do not provide arbitrary write endpoints for personal profile fields (Headline, Summary/About, Experience) to general third-party developer applications.
-- **Adopted Strategy (Hybrid Approach):**
-  1. Extensible `ILinkedInSyncWorker` architecture with typed `UpdateOutcome` (`Succeeded`, `Failed`, `Unsupported`, `Unknown`).
-  2. Deterministic mock / sandbox provider for all automated contract and regression testing (ST/LI/AP suites).
-  3. WebView2 may assist a user with manual profile edits after explicit confirmation; it does not bypass LinkedIn API permissions or automate unsupported writes.
-  4. 1-click fallback: "Copy to Clipboard & Open LinkedIn Profile Editor" when official REST write scopes are restricted or unavailable, ensuring zero dead ends for the user.
+### 2.2 LinkedIn Login, Profile Import & Policy
+- **Login:** Open LinkedIn login in the system default browser. The browser may remember the user's credentials. LIpstick never requests, stores, reads, or reuses LinkedIn passwords, cookies, or browser tokens.
+- **Profile access:** User saves their LinkedIn profile URL and pastes profile text they can view into LIpstick. The app stores this snapshot locally and scans it. Refresh requires pasting a new copy after the user edits their LinkedIn profile.
+- **Policy boundary:** Do not scrape LinkedIn pages, automate page interaction, or read the browser's authenticated session. LinkedIn's User Agreement prohibits automated scraping, and full profile API access is not offered to ordinary third-party apps.
+- **Updates:** Recommendations are manual. LIpstick never reports profile writes as successful or implies rollback on LinkedIn. Local history records only local snapshots/recommendations.
 
 ### 2.3 AI Provider Architecture & Model Hub
 - **Authentication:** Direct API Key management backed by Windows Credential Locker / DPAPI.

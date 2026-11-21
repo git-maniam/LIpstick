@@ -63,7 +63,7 @@
                         <StackPanel Spacing="3"><TextBlock Text="Privacy &amp; data" FontSize="15" FontWeight="SemiBold" Foreground="#17284D" /><TextBlock Text="Your credentials and work stay on this device." FontSize="11" Foreground="#667796" /></StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                        <TextBlock Text="Provider keys and LinkedIn tokens are protected with Windows DPAPI. Profile data and drafts are stored locally." FontSize="12" Foreground="#53678E" TextWrapping="Wrap" />
+                        <TextBlock Text="Provider keys are protected with Windows DPAPI. Your LinkedIn profile URL, pasted profile snapshot, and drafts are stored locally. LIpstick never stores LinkedIn passwords or browser sessions." FontSize="12" Foreground="#53678E" TextWrapping="Wrap" />
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <TextBlock Text="Local data location" FontSize="11" Foreground="#667796" VerticalAlignment="Center" />

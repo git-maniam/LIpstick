@@ -50,14 +50,17 @@ public interface IHumanizerEngine
 }
 ```
 
-## 3. LinkedIn Write-Back Contract
+## 3. LinkedIn Profile Snapshot Contract
 ```csharp
 namespace LIpstick.Core.Interfaces;
 
-public interface ILinkedInSyncWorker
+public interface ILinkedInClient
 {
-    Task<bool> UpdateHeadlineAsync(string newHeadline, CancellationToken cancellationToken = default);
-    Task<bool> UpdateAboutAsync(string newAbout, CancellationToken cancellationToken = default);
-    Task<bool> UpdateExperienceAsync(string experienceId, string newDescription, CancellationToken cancellationToken = default);
+    Task<LinkedInSessionInfo> ConnectAsync(CancellationToken cancellationToken = default); // Opens default browser login.
+    Task<LinkedInSessionInfo> GetSessionInfoAsync(CancellationToken cancellationToken = default); // Reports profile setup, not browser auth.
+    Task<LinkedInProfile> IngestProfileAsync(CancellationToken cancellationToken = default); // Parses user-provided local snapshot.
 }
 ```
+- LinkedIn passwords and browser sessions remain in the browser and are inaccessible to LIpstick.
+- Profile URL and text snapshot are stored locally. A refresh uses a new snapshot pasted by the user.
+- No automated scraping, browser automation, or profile write API calls are permitted. Recommendations are applied manually by the user.

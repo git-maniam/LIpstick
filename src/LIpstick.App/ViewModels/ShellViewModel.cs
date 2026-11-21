@@ -75,10 +75,10 @@ public partial class ShellViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        // 1. Check LinkedIn session
+        // 1. Check whether a profile URL is configured; browser login is intentionally not inspected.
         var session = await _linkedInClient.GetSessionInfoAsync();
         IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
-        LinkedInStatus = IsLinkedInConnected ? "Connected" : "Disconnected";
+        LinkedInStatus = IsLinkedInConnected ? "Profile ready" : "Profile not set";
 
         // 2. Check AI keys
         IsGeminiConnected = await _secureStorage.HasSecretAsync("GEMINI_API_KEY");

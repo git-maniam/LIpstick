@@ -9,6 +9,10 @@ public partial class ScannerViewModel : ObservableObject
 {
     private readonly ILinkedInClient _linkedInClient;
     private readonly IRubricEvaluator _evaluator;
+    private readonly ILocalDataService _dataService;
+
+    [ObservableProperty]
+    private string _profileTextInput = string.Empty;
 
     [ObservableProperty]
     private bool _isScanning;
@@ -34,14 +38,17 @@ public partial class ScannerViewModel : ObservableObject
     [ObservableProperty]
     private List<RubricCategoryScore> _fixFirstItems = new();
 
-    public ScannerViewModel(ILinkedInClient linkedInClient, IRubricEvaluator evaluator)
+    public ScannerViewModel(ILinkedInClient linkedInClient, IRubricEvaluator evaluator, ILocalDataService dataService)
     {
         _linkedInClient = linkedInClient;
         _evaluator = evaluator;
+        _dataService = dataService;
     }
 
     public async Task InitializeAsync()
     {
+        var config = await _dataService.LoadConfigAsync();
+        ProfileTextInput = config.LinkedInProfileText ?? string.Empty;
         await ScanProfileAsync();
     }
 
@@ -51,10 +58,15 @@ public partial class ScannerViewModel : ObservableObject
         IsScanning = true;
         try
         {
+            if (!string.IsNullOrWhiteSpace(ProfileTextInput))
+            {
+                var config = await _dataService.LoadConfigAsync();
+                await _dataService.SaveConfigAsync(config with { LinkedInProfileText = ProfileTextInput.Trim() });
+            }
             var session = await _linkedInClient.GetSessionInfoAsync();
             if (session.State != LinkedInConnectionState.Connected)
             {
-                StatusMessage = "Connect LinkedIn from Connections before scanning a profile.";
+                StatusMessage = "Open LinkedIn from Connections and save your profile URL before scanning.";
                 ProfileName = "LinkedIn profile";
                 ProfileHeadline = "Your profile details will appear here after connecting.";
                 TotalScore = 0;

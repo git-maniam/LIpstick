@@ -48,15 +48,15 @@ This repository contains the complete specification, data dictionaries, heuristi
    - Sign in with OpenAI (GPT-4o, o3-mini via OpenAI .NET SDK).
    - Dynamic Model Selector dropdown in the modern custom title bar.
 3. **LinkedIn Session & Profile Scan:**
-   - Connect through LinkedIn OAuth in the system browser with a loopback callback; tokens and the app secret are stored with DPAPI.
-   - Current OAuth scopes provide OpenID Connect identity data. Additional profile fields and write-back require the corresponding LinkedIn product permissions and are not implied by sign-in.
-   - Scan button evaluates available profile data against the 100-point rubric in `data/rubric.json`.
+   - Open LinkedIn login in the default browser; the browser remembers sign-in when the user chooses. LIpstick never receives or stores a LinkedIn password, cookie, or browser token.
+   - Save a profile URL such as `https://www.linkedin.com/in/rsmaniam/`, then paste the visible profile text into Scanner. LIpstick saves and scans that local snapshot; paste an updated copy before rescanning.
+   - LIpstick does not scrape LinkedIn pages or access the browser's signed-in session. LinkedIn's terms prohibit automated scraping, and full profile API access is not available to ordinary third-party apps.
 4. **Side-by-Side Recommendations & Real-Time C# Humanizer:**
    - Side-by-side diff comparison between current profile and AI rewrite.
    - Real-time scoring and cleaning engine (invisible Unicode removal, typographic normalization, slop scrub) ensuring high human score ($\text{PASS} \ge 70$).
-5. **Direct "Apply" Synchronizer:**
-   - Apply button syncs the verified humanized text directly to the live LinkedIn profile.
-   - Saves previous state to rollback history for safe undo.
+5. **Manual Profile Updates:**
+   - Review and copy the verified humanized recommendation, then apply it yourself in LinkedIn.
+   - Paste the updated profile text into Scanner to rescan. LIpstick never reports an unperformed LinkedIn update as successful.
 
 ---
 
@@ -66,9 +66,9 @@ This repository contains the complete specification, data dictionaries, heuristi
 - **Visual Studio 2026 / Visual Studio Code** with C# Dev Kit and Windows App SDK workloads
 - Windows 11 (build 22000+) or Windows 10 (version 1809+, build 17763+)
 
-### LinkedIn OAuth setup
+### LinkedIn profile setup
 
-Register a LinkedIn developer application, request native OAuth PKCE enablement from LinkedIn, and save its Client ID in LIpstick's Connections page. Choose Connect to sign in through the system browser; LIpstick listens on a random loopback port and uses PKCE without embedding a client secret. Access to profile fields beyond OpenID Connect identity depends on the products and permissions approved for that LinkedIn application.
+Choose **Open LinkedIn Login** to sign in through your default browser, then save your LinkedIn profile URL in Connections. The browser manages saved credentials. Copy your visible profile text and paste it into Scanner before scanning; paste a fresh copy after profile edits. A LinkedIn developer app is not required. LinkedIn's terms prohibit automated profile scraping, so LIpstick does not read browser cookies or fetch profile pages itself.
 
 ## Dependency-first implementation plan
 
