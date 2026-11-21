@@ -59,6 +59,12 @@ flowchart TD
 
 ## 2. Windows Modern UI Design System
 
+### 2.0. Approved Scanner Visual Reference
+The Scanner tab must follow [`Scanner.png`](Scanner.png) for its visual hierarchy, spacing, pastel palette, and information arrangement. Use the LIpstick app icon only as the small brand mark in the navigation area; do not add decorative lipstick or mascot artwork to the Scanner page. Preserve the reference's compact navigation, restrained top bar, prominent scan action, single overall-score panel, and readable rubric list with only the highest-priority items marked “Fix first.” The image is a layout and styling reference only: use the exact category names and point weights defined in this specification and `data/rubric.json`; mockup scores and labels are not product data. Keep controls accessible and responsive at supported window sizes and display scaling.
+
+### 2.0.1. Approved Improve Visual Reference
+The Improve tab must follow [`Improve.png`](Improve.png) as its development template, using the same pastel palette, navigation, top bar, spacing, typography, and Fluent card styling as the Scanner reference. Provide selectable profile sections and show the selected section's current “As-Is” content beside the editable “To-Be” recommendation. Keep the current content read-only, surface relevant issues, and display the humanizer verdict and its five metrics with actions to view the diff, edit, regenerate, or apply the selected section. Applying remains subject to the confirmation and safety gates in this specification. The image guides layout and styling only; sample text, scores, proof claims, and labels are illustrative and must not be treated as user data or fabricated into recommendations. Use the defined profile fields, provider contracts, and humanizer thresholds as the source of truth. Keep the screen accessible and responsive at supported window sizes and display scaling.
+
 ### 2.1. Visual Design Principles
 - **Design Language:** Microsoft Fluent Design System (Windows 11 / Windows App SDK).
 - **Surface Materials:** Mica material (`MicaController` / `MicaBackdrop`) with Acrylic flyouts and modern rounded corners (8px–12px radius).
@@ -70,6 +76,8 @@ flowchart TD
 
 ### 2.2. Application Navigation & Layout Hierarchy
 The application uses the Windows App SDK `NavigationView` with a left-aligned collapsible navigation bar and a multi-tab workspace:
+
+The sidebar includes the persistent LinkedIn, OpenAI, and Gemini login/status controls specified in 2.0.2, alongside the navigation destinations.
 
 1. **Connections & Setup (`/connect`)**: LinkedIn login status, Google/OpenAI sign-in cards, model picker.
 2. **Profile Scanner (`/scan`)**: Live profile card, scan trigger, 100-point rubric breakdown.
@@ -232,3 +240,11 @@ For every case record the commit/build, OS version, fixture or fake version, tim
   - Implement LinkedIn profile update API calls.
   - Build history backup and rollback mechanism (`history.json`).
   - Add confirmation dialogs and safety threshold gates.
+
+### 2.0.2. Sidebar Account Login and Status
+The left navigation sidebar must include three persistent account controls: **Login to LinkedIn**, **OpenAI Login**, and **Gemini Login**. Each control shows its current state, using clear **Connected** or **Disconnected** text and an accessible status indicator; show a pending state while authentication is in progress and an actionable error if it fails. Activating a disconnected control starts that provider's configured sign-in flow. Activating a connected control opens account details and a disconnect action. These controls appear consistently on Scanner and Improve and remain available when the sidebar is expanded or collapsed (compact icon with accessible name/status when collapsed).
+
+LinkedIn status is independent from AI-provider status. Scanner and Improve require LinkedIn to be connected before reading live profile data or applying edits. The model dropdown lists models only from connected AI providers; if neither OpenAI nor Gemini is connected, show an empty disabled selector with a prompt to connect at least one provider. If at least one provider is connected, show its available models; if both are connected, allow selection across both. Provider login is required before models are listed. Disconnection or credential expiry removes unavailable models from the selector and preserves a clear status message. Store provider credentials in protected credential storage, never in ordinary preferences.
+
+### 2.0.3. Approved Supporting Screen Wireframes
+Use [`Connections-Content-History-Settings.png`](Connections-Content-History-Settings.png) as the visual reference for Connections, Content Lab, History, and Settings. Keep the established pastel palette, persistent account statuses, compact navigation, clear hierarchy, and generous spacing from Scanner and Improve. Connections shows separate provider cards and the requirement to connect at least one AI provider for model choices. Content Lab presents skill selection, drafting controls, and a visible notice that content is not sent or published automatically. History provides filters, change summaries, scores/status, and confirmed restore. Settings groups appearance, AI defaults, local data/privacy, export, and confirmed deletion. Treat example identities, content, values, and records as illustrative; runtime state and this specification govern actual behavior. Maintain responsive layouts and accessible control labels/statuses.

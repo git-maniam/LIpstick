@@ -11,6 +11,30 @@
 
 ## Screen Layouts
 
+### Approved Supporting Screen Reference
+See [`../Connections-Content-History-Settings.png`](../Connections-Content-History-Settings.png) for the approved visual direction for Connections, Content Lab, History, and Settings. It complements `Scanner.png` and `Improve.png`.
+
+### 2. Connect Tab (`/connect`)
+- Persistent sidebar shows LinkedIn, OpenAI, and Gemini connection states.
+- Three provider cards show concise purpose, Connected/Disconnected status, and connect/disconnect action.
+- Explain that at least one AI provider must be connected to populate the model selector.
+
+### 3. Content Lab (`/content`)
+- Provide a selectable tool list for Posts, Carousel, Weekly Plan, DM, Inbox, Comments, Replies, Profile, Audit, and Repurpose.
+- Show the selected workflow's inputs beside its draft/preview and actions.
+- Keep a visible notice that drafts are not automatically posted or sent.
+
+### 4. History (`/history`)
+- Provide section/date/status filters and a readable list of changes with previous/applied text summaries, score, and status.
+- Restore requires a confirmation that describes the replacement.
+
+### 5. Settings (`/settings`)
+- Group appearance, AI provider/model defaults, privacy and local data location, export, and clear-data controls.
+- Confirm destructive data deletion and explain what will be removed.
+
+### Persistent Sidebar Account Controls
+Every screen includes persistent sidebar controls for **Login to LinkedIn**, **OpenAI Login**, and **Gemini Login**. Each shows **Connected** or **Disconnected** status, with pending/error states during sign-in. These remain accessible in collapsed navigation. LinkedIn connection gates profile scanning and applying changes. The model selector lists available models only for connected AI providers; with neither provider connected, it is disabled and prompts the user to connect OpenAI or Gemini.
+
 ### 1. Navigation Shell
 ```text
 +----------------------------------------------------------------------------------------------------+

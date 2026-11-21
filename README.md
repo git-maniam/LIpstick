@@ -2,7 +2,7 @@
 
 > **LIpstick** (Lipstick for LinkedIn) — makeup and polish for your professional LinkedIn presence. Built with latest **.NET 10 (C# 14)** and **Windows Modern UI (WinUI 3 / Windows App SDK)**.
 
-This repository contains the complete specification, data dictionaries, heuristic engines, architecture documents, and .NET project scaffolding required to build **LIpstick**.
+This repository contains the complete specification, data dictionaries, heuristic engines, architecture documents, and .NET project scaffolding required to build **LIpstick**. Approved UI references: [Scanner](Scanner.png), [Improve](Improve.png), and [Connections, Content Lab, History, Settings](Connections-Content-History-Settings.png).
 
 ---
 
