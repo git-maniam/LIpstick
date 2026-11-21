@@ -2,7 +2,7 @@
 
 ## 1. AI Provider Interface
 ```csharp
-namespace LIPstick.Core.Interfaces;
+namespace LIpstick.Core.Interfaces;
 
 public record RecommendationRequest(
     string SectionName,
@@ -22,7 +22,7 @@ public interface IAIProvider
 
 ## 2. Humanizer Scoring Contract
 ```csharp
-namespace LIPstick.Core.Interfaces;
+namespace LIpstick.Core.Interfaces;
 
 public enum HumanizerVerdict
 {
@@ -52,7 +52,7 @@ public interface IHumanizerEngine
 
 ## 3. LinkedIn Write-Back Contract
 ```csharp
-namespace LIPstick.Core.Interfaces;
+namespace LIpstick.Core.Interfaces;
 
 public interface ILinkedInSyncWorker
 {

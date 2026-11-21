@@ -1,10 +1,11 @@
-# Windows Modern UI Specifications & Wireframes: LI-pstick
+# Windows Modern UI Specifications & Wireframes: LIpstick
 
 ## Visual Style Guide
-- **Application Name:** `LI-pstick`
+- **Application Name:** `LIpstick`
+- **Application Icon:** `LIpstick-Logo.png`
 - **Shell Design:** Windows 11 Fluent Design System with WinUI 3 / Windows App SDK, Mica material backdrop, and rounded window frames.
 - **Theme:** Light Theme as Default (`#F9F9F9`), Dark Theme Toggle (`#202020`).
-- **Accent Color:** LinkedIn Professional Blue (`#0A66C2`) with Lip Stick polish aesthetics.
+- **Accent Color:** LinkedIn Professional Blue (`#0A66C2`) with Lipstick polish aesthetics.
 
 ---
 
@@ -13,7 +14,7 @@
 ### 1. Navigation Shell
 ```text
 +----------------------------------------------------------------------------------------------------+
-| [LI-pstick Icon]   LI-pstick                         [Model: Gemini 2.0 Flash v] [Theme: Sun/Moon] |
+| [LIpstick-Logo.png]   LIpstick                       [Model: Gemini 2.0 Flash v] [Theme: Sun/Moon] |
 +------------------+---------------------------------------------------------------------------------+
 |  (Nav View)      |                                                                                 |
 |  [+] Connect     |  Active Tab Workspace                                                           |

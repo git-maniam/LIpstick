@@ -1,6 +1,7 @@
-# Technical Specification: LI-pstick (Windows Modern UI)
+# Technical Specification: LIpstick (Windows Modern UI)
 
-**Application Name:** `LI-pstick` (Lip Stick for LinkedIn: makeup & polish for your profile)  
+**Application Name:** `LIpstick` (Lipstick for LinkedIn: makeup & polish for your profile)  
+**Application Icon:** `LIpstick-Logo.png`  
 **Target Framework:** .NET 10 (C# 14 / Windows Modern UI - WinUI 3 / Windows App SDK)  
 **Target Platform:** Windows 11 / Windows 10 (Modern Fluent Design System)  
 **AI Providers Supported:** Google Gemini (Gemini 2.5 / 2.0 / 1.5 Series via Google.GenAI SDK) & OpenAI (GPT-4o, GPT-4o mini, o3-mini via OpenAI SDK)  
@@ -11,9 +12,9 @@
 
 ## 1. Product Vision & Architecture Overview
 
-**LI-pstick** is a modern Windows desktop application built with .NET 10 (C#) and WinUI 3 / Windows App SDK that bridges professional LinkedIn optimization with multi-provider generative AI (Google Gemini & OpenAI). It allows users to authenticate their LinkedIn account, connect to AI models, scan their profile against an empirical 100-point rubric, review side-by-side humanized recommendations, and apply updates directly to their live LinkedIn profile with one click.
+**LIpstick** is a modern Windows desktop application built with .NET 10 (C#) and WinUI 3 / Windows App SDK that bridges professional LinkedIn optimization with multi-provider generative AI (Google Gemini & OpenAI). It allows users to authenticate their LinkedIn account, connect to AI models, scan their profile against an empirical 100-point rubric, review side-by-side humanized recommendations, and apply updates directly to their live LinkedIn profile with one click.
 
-Just like lipstick adds polish and confidence, **LI-pstick** polishes and beautifies your professional presence on LinkedIn while stripping away machine fingerprints and AI slop.
+Just like lipstick adds polish and confidence, **LIpstick** polishes and beautifies your professional presence on LinkedIn while stripping away machine fingerprints and AI slop.
 
 ```mermaid
 flowchart TD
@@ -164,7 +165,7 @@ The user is automatically transitioned to the **Recommendations** tab featuring 
    - A verification ContentDialog displays a summary of the pending modifications.
    - The engine validates that the humanizer score meets the minimum safety threshold ($\ge 70$).
 2. The application executes the update via the authenticated LinkedIn connection.
-3. The original text is saved to a local rollback log (`%LocalAppData%/LI-pstick/history.json`).
+3. The original text is saved to a local rollback log (`%LocalAppData%/LIpstick/history.json`).
 4. A Windows App SDK InAppNotification / Toast confirms: *"Headline successfully updated on LinkedIn. Previous version backed up to History."*
 
 ---
@@ -173,6 +174,7 @@ The user is automatically transitioned to the **Recommendations** tab featuring 
 
 ### 5.1. Desktop Framework
 - **Framework:** **.NET 10 (C# 14)** with **WinUI 3 (Windows App SDK)** or **WPF Modern UI**.
+- **Application Icon:** `LIpstick-Logo.png`
 - **UI Architecture:** MVVM (CommunityToolkit.Mvvm).
 - **Styling:** Native Windows 11 Fluent Design System, Mica backdrop, Windows 11 native Light/Dark themes.
 - **Embedded Browser:** Microsoft.Web.WebView2 for LinkedIn session handshake.
@@ -181,7 +183,7 @@ The user is automatically transitioned to the **Recommendations** tab featuring 
 
 ### 5.2. Local Storage & Security Specifications
 - **Windows Credential Locker:** Tokens and keys stored securely using `Windows.Security.Credentials.PasswordVault` / DPAPI.
-- **Application Data Directory:** `%LocalAppData%\LI-pstick\`
+- **Application Data Directory:** `%LocalAppData%\LIpstick\`
   - `voice.md` (Personal tone profile)
   - `plan.md` (Weekly content schedule)
   - `history.json` (Rollback snapshots of profile changes)
@@ -189,10 +191,29 @@ The user is automatically transitioned to the **Recommendations** tab featuring 
 
 ---
 
-## 6. Implementation Checklist
+## 6. Milestone Test and Acceptance Policy
+
+The functional cases in [`TEST-PLAN.md`](TEST-PLAN.md) are mandatory gates after each major implementation milestone. Tests must use deterministic fakes for LinkedIn, Gemini, OpenAI, WebView2, notifications, and filesystem unless a case explicitly requires a separately approved sandbox account. Do not advance to the next milestone while a required case is failing or has no recorded evidence.
+
+### 6.1 Required cadence
+
+1. **After Phase 1 (shell):** Run T1, T2, T4 and SH-01 through SH-05. Confirm all routes, themes, keyboard navigation, DPI, resize, and accessibility basics.
+2. **After Phase 2 (authentication and providers):** Run T1-T4, LI-01 through LI-06, AI-01 through AI-05, and ST-01. Confirm secure storage, token lifecycle, provider contracts, model selection, cancellation, and redaction.
+3. **After Phase 3 (scanner and rubric):** Run T1-T4, SC-01 through SC-05, plus the Phase 2 regression set. Confirm exact 100-point weighting, deterministic priorities, partial/offline behavior, and no write-back.
+4. **After Phase 4 (humanizer and recommendations):** Run T1-T5, HU-01 through HU-06, DF-01 through DF-05, plus scanner/provider regressions. Confirm every cleaning rule, threshold boundary, diff, live score, and edit-preservation behavior.
+5. **After Phase 5 (apply and history):** Run T1-T6, AP-01 through AP-06, plus the complete prior regression set. Confirm score gates, confirmation, atomic backup, partial failure handling, and rollback.
+6. **After Phase 6 (Content Lab):** Run T1-T6, CL-01 through CL-06, plus humanizer/storage regressions. Confirm all 11 skills, no fabrication, output constraints, persistence, and explicit external-action gates.
+7. **Release candidate:** Run RE-01 through RE-06, all milestone regression cases, secret scanning, packaging, accessibility, resilience, and the full end-to-end workflow.
+
+### 6.2 Evidence and exit criteria
+
+For every case record the commit/build, OS version, fixture or fake version, timestamp, result, and evidence link or screenshot. A milestone is accepted only when its required cases pass, T1-T6 are satisfied where applicable, defects are triaged, and the acceptance record is attached to the corresponding GitHub issue. A failed, cancelled, interrupted, or malformed operation must preserve the last valid data and must not cause an unintended LinkedIn write.
+
+## 7. Implementation Checklist
 
 - [ ] **Phase 1: .NET 10 Modern UI Shell**
-  - Setup .NET 10 solution (`LI-pstick.sln`) with WinUI 3 Modern Windows UI.
+  - Setup .NET 10 solution (`LIpstick.sln`) with WinUI 3 Modern Windows UI.
+  - Configure application icon to use `LIpstick-Logo.png`.
   - Configure Fluent Mica backdrop with Light (default) and Dark theme switching.
   - Implement collapsible `NavigationView` (`Connections`, `Scanner`, `Recommendations`, `History`).
 - [ ] **Phase 2: Authentication Handlers**

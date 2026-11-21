@@ -1,8 +1,8 @@
-# LI-pstick: Windows Modern UI for LinkedIn
+# LIpstick: Windows Modern UI for LinkedIn
 
-> **LI-pstick** (Lip Stick for LinkedIn) — makeup and polish for your professional LinkedIn presence. Built with latest **.NET 10 (C# 14)** and **Windows Modern UI (WinUI 3 / Windows App SDK)**.
+> **LIpstick** (Lipstick for LinkedIn) — makeup and polish for your professional LinkedIn presence. Built with latest **.NET 10 (C# 14)** and **Windows Modern UI (WinUI 3 / Windows App SDK)**.
 
-This repository contains the complete specification, data dictionaries, heuristic engines, architecture documents, and .NET project scaffolding required to build **LI-pstick**.
+This repository contains the complete specification, data dictionaries, heuristic engines, architecture documents, and .NET project scaffolding required to build **LIpstick**.
 
 ---
 
@@ -64,3 +64,37 @@ This repository contains the complete specification, data dictionaries, heuristi
 - **.NET 10 SDK** (or higher)
 - **Visual Studio 2026 / Visual Studio Code** with C# Dev Kit and Windows App SDK workloads
 - Windows 11 (build 22000+) or Windows 10 (version 1809+, build 17763+)
+
+## Dependency-first implementation plan
+
+Track delivery in [Project LIpstick](https://github.com/users/git-maniam/projects/8). Architecture, software compatibility, security, and persistence are prerequisites for feature work.
+
+| Milestone | Implementation and dependencies | Acceptance gate |
+| --- | --- | --- |
+| M0: Feasibility and decisions | Verify LinkedIn authentication, readable/writable fields, scopes, approvals, and refresh behavior against official documentation. Verify AI authentication/model availability. Select WinUI 3; establish Windows, CPU architecture, SDK/package, WebView2 distribution, packaging, signing, and update compatibility decisions. | Record evidence and pinned versions. Unsupported capabilities block dependent features; OAuth alone is not evidence of profile-edit access. |
+| M1: Secure foundation | Issue #1 plus the storage/security foundations of #9 precede integrations. Separate UI, Core, Infrastructure, and tests; Core has no UI/SDK dependency. Add DI, configuration, protected credentials, redacted diagnostics, cancellation, and atomic persistence. | Shell, accessibility basics, secret isolation, and ST-01/ST-02 storage recovery/deletion cases pass. |
+| M2: Connections and adapters | Issues #2/#3 depend on M0/M1. Add capability-aware clients, token lifecycle, model selection, typed errors, timeouts, cancellation, and rate-limit handling. | LI and AI cases pass; unavailable capabilities are visibly disabled. |
+| M3: Profile and scoring | Issue #4 depends on M2. Normalize snapshots and field availability. Reconcile rubric data to SPEC.md before implementing evidence-backed scoring and scanner UI. | SC cases pass; inaccessible fields are distinct from empty fields. |
+| M4: Humanizer and review | Issues #5/#6 depend on M2/M3. Implement deterministic cleaning/scoring, bounded rewrites, provenance, diffs, and manual-edit preservation. | HU/DF cases pass, including stale results and threshold boundaries. |
+| M5: Apply and recovery | Issue #7 depends on M1-M4 and verified write permissions. Persist original snapshot and pending operation before mutation. Reconcile uncertain outcomes before retry; report partial success and confirm rollback. | AP cases pass; no blind retries or overwriting intervening edits. |
+| M6: Content Lab | Issue #8 depends on shared provider, humanizer, and storage services. Split into eleven skill tasks; implement shared voice/draft/plan/log services first. | Expand CL cases per skill; drafting tools do not publish or send. |
+| M7: Release | Issue #10 follows all required milestones. Complete packaging, supported-platform checks, accessibility, resilience, dependency review, and end-to-end acceptance. | All functional cases and release gates pass with recorded evidence. |
+
+### Decisions to resolve before feature implementation
+
+- Pin the .NET SDK and centralized package versions with locked restore. Record licenses, transitive dependencies, vulnerabilities, and update ownership.
+- Finalize installation identity, signing, update behavior, WebView2 distribution, and backdrop fallbacks in M0.
+- Store credentials with Windows protection; define logout/revocation, data retention, local file permissions, and deletion before connection work. Never put secrets in prompts, configuration, logs, or source.
+- Explain which profile data is sent to the selected AI provider. Treat imported text and model output as untrusted; validate structure/length and prevent generated text from invoking writes.
+- Extend contracts with capability flags, field availability, snapshot identity, typed provider errors, and update outcomes: succeeded, failed, unsupported, or outcome unknown.
+- Reconcile known inconsistencies: rubric data assigns Headshot 6 points while SPEC.md assigns 4; Boolean update results cannot represent uncertain outcomes. SPEC.md is authoritative for rubric weights. Remove the WPF alternative when recording the WinUI 3 architecture decision.
+- Centralize eligibility at overall score >=70 and each metric >=55. Label scoring as a heuristic, not proof of human authorship.
+- Unsupported LinkedIn capabilities require a documented product decision before substituting a manual workflow.
+
+### Milestone verification and execution
+
+Use [TEST-PLAN.md](TEST-PLAN.md) and the milestone gates in [SPEC.md](SPEC.md). Include ST-01/ST-02 explicitly; add cases for capability denial, credential revocation, prompt injection, stale snapshots, and uncertain writes.
+
+Batch necessary checks at milestone completion; reuse evidence only when code and dependencies remain unchanged. Rerun affected cases after fixes and the full suite at release. Record commit, environment, fixtures, expected/actual results, defects, and evidence. Failed prerequisites block dependent milestones; independent work may continue.
+
+Keep GitHub issue dependencies and acceptance evidence synchronized. Never mark implementation complete from documentation alone. Maintain a restart bookmark every 30 minutes during execution.
