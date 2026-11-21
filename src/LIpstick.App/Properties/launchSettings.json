@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "LIpstick.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "LIpstick.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

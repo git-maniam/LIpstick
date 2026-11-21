@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="LIpstick_App.Pages.ContentLabPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:LIpstick.Core.Models"
+    mc:Ignorable="d">
+
+    <Grid Padding="32,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header with Safety Notice (T6 Gate) -->
+        <StackPanel Spacing="6" Margin="0,0,0,16">
+            <TextBlock Text="Content Lab (11 LinkedIn Skills)" FontSize="24" FontWeight="SemiBold" />
+            <Border Background="#100A66C2" BorderBrush="#300A66C2" BorderThickness="1" CornerRadius="8" Padding="12,6" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE7BA;" Foreground="#0A66C2" FontSize="14" />
+                    <TextBlock Text="All generated content is drafted for your review and is NEVER published or sent automatically." FontSize="12" Opacity="0.8" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Main Workspace -->
+        <Grid Grid.Row="1" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: 11 Skills Selection List -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
+                <ListView ItemsSource="{x:Bind ViewModel.Skills, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedSkill, Mode=TwoWay}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:SkillToolDefinition">
+                            <StackPanel Spacing="2" Padding="4,6">
+                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="13" />
+                                <TextBlock Text="{x:Bind Description}" Opacity="0.6" FontSize="11" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Border>
+
+            <!-- Right: Interactive Generator Surface -->
+            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Feed Post Generator (li-post)" FontSize="18" FontWeight="SemiBold" />
+
+                        <TextBox Header="Core Topic / Thesis" Text="{x:Bind ViewModel.PostTopic, Mode=TwoWay}" PlaceholderText="What is the key takeaway?" />
+                        <TextBox Header="Target Audience" Text="{x:Bind ViewModel.PostAudience, Mode=TwoWay}" PlaceholderText="e.g. B2B Ops Leaders" />
+                        <TextBox Header="Verifiable Outcome / Metric" Text="{x:Bind ViewModel.PostMetric, Mode=TwoWay}" PlaceholderText="e.g. 12 hours/week, $45,000" />
+
+                        <Button Content="Generate Post Draft" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.GeneratePostCommand}" />
+
+                        <TextBlock Text="{x:Bind ViewModel.PostStatus, Mode=OneWay}" Foreground="#10B981" FontWeight="SemiBold" FontSize="12" />
+
+                        <TextBox
+                            Header="Copy-Ready Post (Zero Outbound Links, Max 3 Hashtags)"
+                            Text="{x:Bind ViewModel.GeneratedPost, Mode=OneWay}"
+                            IsReadOnly="True"
+                            TextWrapping="Wrap"
+                            AcceptsReturn="True"
+                            MinHeight="180" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

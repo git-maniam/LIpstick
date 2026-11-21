@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="LIpstick_App.Pages.HistoryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:LIpstick.Core.Models"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="32,24">
+        <StackPanel Spacing="20" MaxWidth="1000" HorizontalAlignment="Left">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Rollback History &amp; Audit Log" FontSize="26" FontWeight="SemiBold" />
+                <TextBlock Text="Every applied modification to your live profile is backed up locally in history.json for safe one-click restoration." Opacity="0.7" FontSize="14" />
+            </StackPanel>
+
+            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontWeight="SemiBold" Foreground="#0A66C2" FontSize="13" />
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                <ListView ItemsSource="{x:Bind ViewModel.HistoryItems, Mode=OneWay}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:ProfileHistoryItem">
+                            <Grid Padding="8,12" ColumnSpacing="16" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind SectionName}" FontWeight="SemiBold" FontSize="14" />
+                                    <TextBlock Text="{x:Bind FormattedTimestamp}" Opacity="0.6" FontSize="11" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <TextBlock Text="Previous Text:" FontSize="10" Opacity="0.5" />
+                                    <TextBlock Text="{x:Bind PreviousText}" TextWrapping="Wrap" MaxLines="2" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Applied Rewrite:" FontSize="10" Opacity="0.5" />
+                                    <TextBlock Text="{x:Bind AppliedText}" TextWrapping="Wrap" MaxLines="2" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <Border Grid.Column="3" Background="#1010B981" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind FormattedHumanScore}" FontWeight="Bold" FontSize="12" Foreground="#10B981" />
+                                </Border>
+
+                                <Button Grid.Column="4" Content="Restore" VerticalAlignment="Center" Click="RestoreButton_Click" Tag="{x:Bind}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

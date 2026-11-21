@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LIpstick.App/LIpstick.App.csproj" />
+    <Project Path="src/LIpstick.Core/LIpstick.Core.csproj" />
+    <Project Path="src/LIpstick.Infrastructure/LIpstick.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LIpstick.Tests/LIpstick.Tests.csproj" />
+  </Folder>
+</Solution>

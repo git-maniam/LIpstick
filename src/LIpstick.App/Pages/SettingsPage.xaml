@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="LIpstick_App.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="32,24">
+        <StackPanel Spacing="24" MaxWidth="800" HorizontalAlignment="Left">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Settings &amp; Preferences" FontSize="26" FontWeight="SemiBold" />
+                <TextBlock Text="Customize application appearance, AI preferences, and review local data privacy." Opacity="0.7" FontSize="14" />
+            </StackPanel>
+
+            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontWeight="SemiBold" Foreground="#10B981" FontSize="13" />
+
+            <!-- Appearance Theme Card -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Appearance Theme" FontWeight="SemiBold" FontSize="16" />
+                    <TextBlock Text="Select your visual preference. LIpstick supports Windows 11 Mica backdrop in both light and dark modes." Opacity="0.7" FontSize="13" />
+
+                    <RadioButtons x:Name="ThemeRadioButtons" SelectionChanged="ThemeRadioButtons_SelectionChanged">
+                        <RadioButton Content="Light (Default)" Tag="Light" />
+                        <RadioButton Content="Dark" Tag="Dark" />
+                        <RadioButton Content="Follow Windows System Theme" Tag="System" />
+                    </RadioButtons>
+                </StackPanel>
+            </Border>
+
+            <!-- Local Data & Privacy Card -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Local Storage &amp; Privacy (DPAPI Protected)" FontWeight="SemiBold" FontSize="16" />
+                    <TextBlock Text="All API keys and session tokens are encrypted locally with Windows Credential Locker / DPAPI. Private profile data is never uploaded to telemetry." Opacity="0.7" FontSize="13" />
+
+                    <TextBox Header="Data Directory" Text="{x:Bind ViewModel.DataDirectory, Mode=OneWay}" IsReadOnly="True" />
+
+                    <HyperlinkButton Content="View Privacy &amp; Local Storage Statement" NavigateUri="https://github.com/microsoft/WindowsAppSDK" Margin="0,4,0,0" />
+
+                    <Button Content="Clear Local Data" Style="{ThemeResource AccentButtonStyle}" Background="#EF4444" Foreground="White" Click="ClearDataButton_Click" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

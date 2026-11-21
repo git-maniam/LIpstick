@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Application
+    x:Class="LIpstick_App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:LIpstick_App.Converters"
+    xmlns:local="using:LIpstick_App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:ConnectionColorConverter x:Key="ConnectionColorConverter" />
+            <converters:BoolToConnectedTextConverter x:Key="BoolToConnectedTextConverter" />
+            <converters:BoolToDisconnectButtonTextConverter x:Key="BoolToDisconnectButtonTextConverter" />
+            <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter" />
+            <converters:SectionTabStyleConverter x:Key="SectionTabStyleConverter" />
+            <converters:MetricFormatConverter x:Key="MetricFormatConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
