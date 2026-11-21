@@ -22,4 +22,7 @@ public interface ILocalDataService
     Task<string> LoadContentPlanAsync();
     Task SaveContentPlanAsync(string planMarkdown);
     Task<IReadOnlyList<string>> ClearLocalDataAsync();
+    Task SaveRestartBookmarkAsync(SessionBookmark bookmark, CancellationToken cancellationToken = default);
+    Task<SessionBookmark?> GetRestartBookmarkAsync(CancellationToken cancellationToken = default);
+    Task ClearRestartBookmarkAsync(CancellationToken cancellationToken = default);
 }

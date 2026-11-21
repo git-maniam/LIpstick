@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:LIpstick_App"
+    xmlns:models="using:LIpstick.Core.Models"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="LIpstick - Windows Modern UI for LinkedIn"
     mc:Ignorable="d">
@@ -37,11 +38,20 @@
                         <TextBlock Text="Model:" VerticalAlignment="Center" FontSize="12" Opacity="0.7" />
                         <ComboBox
                             x:Name="ModelSelector"
-                            Width="200"
+                            Width="260"
                             FontSize="12"
                             ItemsSource="{x:Bind ViewModel.AvailableModels, Mode=OneWay}"
-                            SelectedItem="{x:Bind ViewModel.SelectedModel, Mode=TwoWay}"
-                            SelectionChanged="ModelSelector_SelectionChanged" />
+                            SelectedItem="{x:Bind ViewModel.SelectedModelInfo, Mode=TwoWay}"
+                            SelectionChanged="ModelSelector_SelectionChanged">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ModelInfo">
+                                    <StackPanel Orientation="Vertical" Spacing="1">
+                                        <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="12" />
+                                        <TextBlock Text="{x:Bind MetadataSummary}" FontSize="10" Opacity="0.7" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </StackPanel>
 
                     <Button

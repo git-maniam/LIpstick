@@ -1,5 +1,6 @@
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
+using LIpstick.Core.Services;
 
 namespace LIpstick.Infrastructure.AI;
 
@@ -11,8 +12,13 @@ public class MockAIProvider : IAIProvider
     public bool SimulateQuotaExceeded { get; set; } = false;
     public bool SimulateInvalidKey { get; set; } = false;
     public bool SimulateTimeout { get; set; } = false;
+    public bool SimulateRateLimit { get; set; } = false;
+    public bool SimulateNetworkError { get; set; } = false;
     public int SimulatedLatencyMs { get; set; } = 10;
     public string? CustomRecommendationText { get; set; }
+
+    public RecommendationRequest? LastRequest { get; private set; }
+    public string? LastAssembledPrompt { get; private set; }
 
     public MockAIProvider(string providerName = "Google Gemini")
     {
@@ -24,7 +30,7 @@ public class MockAIProvider : IAIProvider
         cancellationToken.ThrowIfCancellationRequested();
 
         if (SimulateInvalidKey)
-            throw new AIProviderException(ProviderName, "Invalid API key or unauthorized access", "UNAUTHORIZED");
+            throw new AIProviderException(ProviderName, "Invalid API key or unauthorized access", AIErrorCodes.Unauthorized);
 
         await Task.Delay(SimulatedLatencyMs, cancellationToken);
 
@@ -52,11 +58,20 @@ public class MockAIProvider : IAIProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        LastRequest = request;
+        LastAssembledPrompt = PromptContextAssembler.AssemblePrompt(request);
+
         if (SimulateInvalidKey)
-            throw new AIProviderException(ProviderName, "API key is invalid or expired", "INVALID_KEY");
+            throw new AIProviderException(ProviderName, "API key is invalid or expired", AIErrorCodes.Unauthorized);
 
         if (SimulateQuotaExceeded)
-            throw new AIProviderException(ProviderName, "Rate limit or quota exceeded for current tier", "RESOURCE_EXHAUSTED");
+            throw new AIProviderException(ProviderName, "Rate limit or quota exceeded for current tier", AIErrorCodes.QuotaExceeded);
+
+        if (SimulateRateLimit)
+            throw new AIProviderException(ProviderName, "Rate limit exceeded (429)", AIErrorCodes.RateLimitExceeded);
+
+        if (SimulateNetworkError)
+            throw new AIProviderException(ProviderName, "Network failure calling AI provider", AIErrorCodes.NetworkError);
 
         if (SimulateTimeout)
         {

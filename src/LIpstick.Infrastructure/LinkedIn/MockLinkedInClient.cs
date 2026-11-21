@@ -5,13 +5,49 @@ namespace LIpstick.Infrastructure.LinkedIn;
 
 public class MockLinkedInClient : ILinkedInClient
 {
-    public LinkedInConnectionState CurrentState { get; set; } = LinkedInConnectionState.Connected;
+    private readonly ISecureStorageService? _secureStorage;
+    private LinkedInConnectionState _currentState = LinkedInConnectionState.Connected;
+    private bool _stateExplicitlySet = false;
+
+    public LinkedInConnectionState CurrentState
+    {
+        get => _currentState;
+        set
+        {
+            _currentState = value;
+            _stateExplicitlySet = true;
+        }
+    }
+
     public bool SimulateRateLimit { get; set; } = false;
     public bool SimulateServerError { get; set; } = false;
     public bool SimulateTokenExpired { get; set; } = false;
     public int SimulatedLatencyMs { get; set; } = 10;
 
     public LinkedInProfile? CustomProfile { get; set; }
+
+    public MockLinkedInClient(ISecureStorageService? secureStorage = null)
+    {
+        _secureStorage = secureStorage;
+    }
+
+    public async Task<LinkedInSessionInfo> ConnectAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await Task.Delay(SimulatedLatencyMs, cancellationToken);
+
+        CurrentState = LinkedInConnectionState.Connected;
+        SimulateTokenExpired = false;
+
+        if (_secureStorage != null)
+        {
+            await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", "mock_oauth2_access_token_" + Guid.NewGuid().ToString("N")[..8]);
+            await _secureStorage.StoreSecretAsync("LINKEDIN_MEMBER_ID", "mem-12345");
+            await _secureStorage.StoreSecretAsync("LINKEDIN_TOKEN_EXPIRY", DateTime.UtcNow.AddDays(60).ToString("o"));
+        }
+
+        return await GetSessionInfoAsync(cancellationToken);
+    }
 
     public async Task<LinkedInSessionInfo> GetSessionInfoAsync(CancellationToken cancellationToken = default)
     {
@@ -29,6 +65,19 @@ public class MockLinkedInClient : ILinkedInClient
                 DateTime.UtcNow.AddMinutes(5),
                 "Access token is expiring soon"
             );
+        }
+
+        if (_secureStorage != null && !_stateExplicitlySet)
+        {
+            var token = await _secureStorage.GetSecretAsync("LINKEDIN_ACCESS_TOKEN");
+            if (string.IsNullOrEmpty(token))
+            {
+                return new LinkedInSessionInfo(
+                    LinkedInConnectionState.Disconnected,
+                    null, null, null, null, null,
+                    "Disconnected"
+                );
+            }
         }
 
         if (CurrentState != LinkedInConnectionState.Connected)
@@ -74,17 +123,36 @@ public class MockLinkedInClient : ILinkedInClient
     {
         cancellationToken.ThrowIfCancellationRequested();
         await Task.Delay(SimulatedLatencyMs, cancellationToken);
-        if (SimulateServerError) return false;
+        if (SimulateServerError)
+        {
+            CurrentState = LinkedInConnectionState.Disconnected;
+            if (_secureStorage != null)
+            {
+                await _secureStorage.DeleteSecretAsync("LINKEDIN_ACCESS_TOKEN");
+            }
+            return false;
+        }
 
         CurrentState = LinkedInConnectionState.Connected;
         SimulateTokenExpired = false;
+        if (_secureStorage != null)
+        {
+            await _secureStorage.StoreSecretAsync("LINKEDIN_TOKEN_EXPIRY", DateTime.UtcNow.AddDays(60).ToString("o"));
+        }
         return true;
     }
 
-    public Task DisconnectAsync(CancellationToken cancellationToken = default)
+    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         CurrentState = LinkedInConnectionState.Disconnected;
-        return Task.CompletedTask;
+        if (_secureStorage != null)
+        {
+            await _secureStorage.DeleteSecretAsync("LINKEDIN_ACCESS_TOKEN");
+            await _secureStorage.DeleteSecretAsync("LINKEDIN_REFRESH_TOKEN");
+            await _secureStorage.DeleteSecretAsync("LINKEDIN_MEMBER_ID");
+            await _secureStorage.DeleteSecretAsync("LINKEDIN_TOKEN_EXPIRY");
+        }
     }
 
     public static LinkedInProfile CreateDefaultFixtureProfile()

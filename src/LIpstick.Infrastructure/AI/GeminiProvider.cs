@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
+using LIpstick.Core.Services;
 
 namespace LIpstick.Infrastructure.AI;
 
@@ -12,6 +13,7 @@ public class GeminiProvider : IAIProvider
 
     public string ProviderName => "Google Gemini";
     public bool IsConfigured { get; private set; }
+    public string? CustomBaseUrl { get; set; }
 
     public GeminiProvider(ISecureStorageService secureStorage, HttpClient? httpClient = null)
     {
@@ -42,13 +44,17 @@ public class GeminiProvider : IAIProvider
         var apiKey = await _secureStorage.GetSecretAsync("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new AIProviderException(ProviderName, "Gemini API key is not configured.", "NO_API_KEY");
+            throw new AIProviderException(ProviderName, "Gemini API key is not configured.", AIErrorCodes.NoApiKey);
         }
 
         string model = string.IsNullOrWhiteSpace(request.ModelName) ? "gemini-2.0-flash" : request.ModelName;
-        string endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+        string baseUrl = !string.IsNullOrWhiteSpace(CustomBaseUrl)
+            ? CustomBaseUrl
+            : (request.RubricCriteria?.TryGetValue("CustomBaseUrl", out var customUrl) == true ? customUrl.ToString()! : "https://generativelanguage.googleapis.com");
 
-        var prompt = BuildPrompt(request);
+        string endpoint = $"{baseUrl.TrimEnd('/')}/v1beta/models/{model}:generateContent";
+
+        var prompt = PromptContextAssembler.AssemblePrompt(request);
         var requestPayload = new
         {
             contents = new[]
@@ -67,15 +73,46 @@ public class GeminiProvider : IAIProvider
 
         var json = JsonSerializer.Serialize(requestPayload);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        httpRequest.Headers.Add("x-goog-api-key", apiKey);
+        httpRequest.Content = content;
 
         try
         {
-            using var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+            using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
             var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new AIProviderException(ProviderName, $"API returned status {response.StatusCode}: {responseString}", response.StatusCode.ToString());
+                string errorCode = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.TooManyRequests => AIErrorCodes.RateLimitExceeded,
+                    System.Net.HttpStatusCode.Forbidden => AIErrorCodes.QuotaExceeded,
+                    System.Net.HttpStatusCode.Unauthorized => AIErrorCodes.Unauthorized,
+                    _ => response.StatusCode.ToString()
+                };
+
+                string errorMessage = $"API returned status {response.StatusCode}";
+                try
+                {
+                    using var errDoc = JsonDocument.Parse(responseString);
+                    if (errDoc.RootElement.TryGetProperty("error", out var errElement))
+                    {
+                        if (errElement.TryGetProperty("message", out var msgElement))
+                        {
+                            errorMessage = msgElement.GetString() ?? errorMessage;
+                        }
+                        if (errElement.TryGetProperty("status", out var statusElement) &&
+                            string.Equals(statusElement.GetString(), "RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase))
+                        {
+                            errorCode = AIErrorCodes.QuotaExceeded;
+                        }
+                    }
+                }
+                catch { }
+
+                errorMessage = errorMessage.Replace(apiKey, "[REDACTED]");
+                throw new AIProviderException(ProviderName, errorMessage, errorCode);
             }
 
             using var doc = JsonDocument.Parse(responseString);
@@ -93,24 +130,21 @@ public class GeminiProvider : IAIProvider
 
             return string.Empty;
         }
-        catch (Exception ex) when (ex is not AIProviderException && ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw new AIProviderException(ProviderName, "Network or protocol error calling Gemini API", "NETWORK_ERROR", ex);
+            throw;
         }
-    }
-
-    private static string BuildPrompt(RecommendationRequest request)
-    {
-        return $@"You are an elite LinkedIn profile polish consultant. Rewrite the following {request.SectionName} to be natural, human, and outcome-driven.
-CRITICAL RULES:
-1. Include at least 1-2 concrete, verifiable numbers/metrics.
-2. Zero AI slop: do NOT use delve, testament, spearhead, seamless, passionate, in the realm of.
-3. Use active voice and natural sentence variation.
-4. Voice context: {request.VoiceProfile}
-
-CURRENT TEXT:
-{request.CurrentText}
-
-RETURN ONLY THE POLISHED REWRITE WITH NO CHATTER, QUOTES, OR PREAMBLE.";
+        catch (Exception ex) when (ex is TimeoutException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            throw new AIProviderException(ProviderName, "Gemini request timed out.", AIErrorCodes.Timeout, ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new AIProviderException(ProviderName, "Network or protocol error calling Gemini API.", AIErrorCodes.NetworkError, ex);
+        }
+        catch (Exception ex) when (ex is not AIProviderException)
+        {
+            throw new AIProviderException(ProviderName, "Network or protocol error calling Gemini API.", AIErrorCodes.NetworkError, ex);
+        }
     }
 }

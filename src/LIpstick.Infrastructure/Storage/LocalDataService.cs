@@ -11,6 +11,7 @@ public class LocalDataService : ILocalDataService
     private readonly string _historyFile;
     private readonly string _voiceFile;
     private readonly string _planFile;
+    private readonly string _bookmarkFile;
     private readonly SemaphoreSlim _ioLock = new(1, 1);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -36,6 +37,7 @@ public class LocalDataService : ILocalDataService
         _historyFile = Path.Combine(DataDirectory, "history.json");
         _voiceFile = Path.Combine(DataDirectory, "voice.md");
         _planFile = Path.Combine(DataDirectory, "plan.md");
+        _bookmarkFile = Path.Combine(DataDirectory, "bookmark.json");
     }
 
     public async Task<AppConfig> LoadConfigAsync()
@@ -225,7 +227,7 @@ public class LocalDataService : ILocalDataService
         try
         {
             var deleted = new List<string>();
-            var targets = new[] { _configFile, _historyFile, _voiceFile, _planFile, Path.Combine(DataDirectory, "secure_vault.dat") };
+            var targets = new[] { _configFile, _historyFile, _voiceFile, _planFile, _bookmarkFile, Path.Combine(DataDirectory, "secure_vault.dat") };
 
             foreach (var target in targets)
             {
@@ -244,6 +246,74 @@ public class LocalDataService : ILocalDataService
             }
 
             return deleted;
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
+    }
+
+    public async Task SaveRestartBookmarkAsync(SessionBookmark bookmark, CancellationToken cancellationToken = default)
+    {
+        await _ioLock.WaitAsync(cancellationToken);
+        try
+        {
+            await SaveAtomicJsonInternalAsync(_bookmarkFile, bookmark);
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
+    }
+
+    public async Task<SessionBookmark?> GetRestartBookmarkAsync(CancellationToken cancellationToken = default)
+    {
+        await _ioLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (!File.Exists(_bookmarkFile))
+            {
+                return null;
+            }
+
+            try
+            {
+                var json = await File.ReadAllTextAsync(_bookmarkFile, cancellationToken);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return null;
+                }
+
+                return JsonSerializer.Deserialize<SessionBookmark>(json, JsonOptions);
+            }
+            catch (Exception)
+            {
+                // Safe parsing fallback: corrupted or truncated bookmark returns null without crashing app startup
+                BackupCorruptFile(_bookmarkFile);
+                return null;
+            }
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
+    }
+
+    public async Task ClearRestartBookmarkAsync(CancellationToken cancellationToken = default)
+    {
+        await _ioLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (File.Exists(_bookmarkFile))
+            {
+                File.Delete(_bookmarkFile);
+            }
+
+            var tmp = _bookmarkFile + ".tmp";
+            if (File.Exists(tmp))
+            {
+                File.Delete(tmp);
+            }
         }
         finally
         {

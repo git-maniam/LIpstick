@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Services;
+using LIpstick.Infrastructure.AI;
 using LIpstick.Infrastructure.LinkedIn;
 using LIpstick.Infrastructure.Storage;
 using LIpstick_App.ViewModels;
@@ -31,8 +32,15 @@ public partial class App : Application
         // Infrastructure
         services.AddSingleton<ISecureStorageService, DpapiSecureStorageService>();
         services.AddSingleton<ILocalDataService, LocalDataService>();
-        services.AddSingleton<ILinkedInClient, MockLinkedInClient>();
+        services.AddSingleton<ILinkedInClient>(sp => new MockLinkedInClient(sp.GetRequiredService<ISecureStorageService>()));
         services.AddSingleton<ILinkedInSyncWorker, LinkedInSyncWorker>();
+
+        // AI Providers & Hub
+        services.AddSingleton<GeminiProvider>();
+        services.AddSingleton<OpenAIProvider>();
+        services.AddSingleton<MockAIProvider>();
+        services.AddSingleton<IAIProvider>(sp => sp.GetRequiredService<GeminiProvider>());
+        services.AddSingleton<IAIHubService, AIHubService>();
 
         // ViewModels
         services.AddSingleton<ShellViewModel>();

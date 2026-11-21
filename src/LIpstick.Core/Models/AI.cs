@@ -15,7 +15,27 @@ public record ModelInfo(
     int ContextWindowTokens,
     int EstimatedLatencyMs,
     bool IsConnected
-);
+)
+{
+    public string FormattedCapacity => ContextWindowTokens >= 1_000_000
+        ? $"{ContextWindowTokens / 1_000_000.0:0.#}M tokens"
+        : $"{ContextWindowTokens / 1_000}k tokens";
+
+    public string MetadataSummary => $"{ProviderName} • {FormattedCapacity} • ~{EstimatedLatencyMs}ms";
+
+    public override string ToString() => $"{DisplayName} ({MetadataSummary})";
+}
+
+public static class AIErrorCodes
+{
+    public const string NoApiKey = "NO_API_KEY";
+    public const string Unauthorized = "UNAUTHORIZED";
+    public const string RateLimitExceeded = "RATE_LIMIT_EXCEEDED";
+    public const string QuotaExceeded = "RESOURCE_EXHAUSTED";
+    public const string Timeout = "TIMEOUT";
+    public const string NetworkError = "NETWORK_ERROR";
+    public const string MalformedResponse = "MALFORMED_RESPONSE";
+}
 
 public class AIProviderException : Exception
 {

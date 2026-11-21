@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
+using LIpstick.Core.Services;
 
 namespace LIpstick.Infrastructure.AI;
 
@@ -13,6 +14,7 @@ public class OpenAIProvider : IAIProvider
 
     public string ProviderName => "OpenAI";
     public bool IsConfigured { get; private set; }
+    public string? CustomBaseUrl { get; set; }
 
     public OpenAIProvider(ISecureStorageService secureStorage, HttpClient? httpClient = null)
     {
@@ -43,12 +45,17 @@ public class OpenAIProvider : IAIProvider
         var apiKey = await _secureStorage.GetSecretAsync("OPENAI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new AIProviderException(ProviderName, "OpenAI API key is not configured.", "NO_API_KEY");
+            throw new AIProviderException(ProviderName, "OpenAI API key is not configured.", AIErrorCodes.NoApiKey);
         }
 
         string model = string.IsNullOrWhiteSpace(request.ModelName) ? "gpt-4o" : request.ModelName;
-        const string endpoint = "https://api.openai.com/v1/chat/completions";
+        string baseUrl = !string.IsNullOrWhiteSpace(CustomBaseUrl)
+            ? CustomBaseUrl
+            : (request.RubricCriteria?.TryGetValue("CustomBaseUrl", out var customUrl) == true ? customUrl.ToString()! : "https://api.openai.com/v1");
 
+        string endpoint = $"{baseUrl.TrimEnd('/')}/chat/completions";
+
+        var prompt = PromptContextAssembler.AssemblePrompt(request);
         var payload = new
         {
             model = model,
@@ -62,7 +69,7 @@ public class OpenAIProvider : IAIProvider
                 new
                 {
                     role = "user",
-                    content = $"Rewrite this {request.SectionName} with concrete metrics and strong human voice:\n\n{request.CurrentText}"
+                    content = prompt
                 }
             },
             temperature = 0.5,
@@ -81,7 +88,38 @@ public class OpenAIProvider : IAIProvider
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new AIProviderException(ProviderName, $"API returned status {response.StatusCode}: {responseString}", response.StatusCode.ToString());
+                string errorCode = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.TooManyRequests => AIErrorCodes.RateLimitExceeded,
+                    System.Net.HttpStatusCode.Forbidden => AIErrorCodes.QuotaExceeded,
+                    System.Net.HttpStatusCode.Unauthorized => AIErrorCodes.Unauthorized,
+                    _ => response.StatusCode.ToString()
+                };
+
+                string errorMessage = $"API returned status {response.StatusCode}";
+                try
+                {
+                    using var errDoc = JsonDocument.Parse(responseString);
+                    if (errDoc.RootElement.TryGetProperty("error", out var errElement))
+                    {
+                        if (errElement.TryGetProperty("message", out var msgElement))
+                        {
+                            errorMessage = msgElement.GetString() ?? errorMessage;
+                        }
+                        if (errElement.TryGetProperty("code", out var codeElement))
+                        {
+                            var codeStr = codeElement.GetString();
+                            if (string.Equals(codeStr, "insufficient_quota", StringComparison.OrdinalIgnoreCase))
+                            {
+                                errorCode = AIErrorCodes.QuotaExceeded;
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                errorMessage = errorMessage.Replace(apiKey, "[REDACTED]");
+                throw new AIProviderException(ProviderName, errorMessage, errorCode);
             }
 
             using var doc = JsonDocument.Parse(responseString);
@@ -96,9 +134,21 @@ public class OpenAIProvider : IAIProvider
 
             return string.Empty;
         }
-        catch (Exception ex) when (ex is not AIProviderException && ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw new AIProviderException(ProviderName, "Network or protocol error calling OpenAI API", "NETWORK_ERROR", ex);
+            throw;
+        }
+        catch (Exception ex) when (ex is TimeoutException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            throw new AIProviderException(ProviderName, "OpenAI request timed out.", AIErrorCodes.Timeout, ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new AIProviderException(ProviderName, "Network or protocol error calling OpenAI API.", AIErrorCodes.NetworkError, ex);
+        }
+        catch (Exception ex) when (ex is not AIProviderException)
+        {
+            throw new AIProviderException(ProviderName, "Network or protocol error calling OpenAI API.", AIErrorCodes.NetworkError, ex);
         }
     }
 }

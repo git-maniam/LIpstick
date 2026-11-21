@@ -12,6 +12,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly ILinkedInClient _linkedInClient;
     private readonly ISecureStorageService _secureStorage;
     private readonly ILocalDataService _dataService;
+    private readonly IAIHubService? _aiHub;
 
     private static readonly SolidColorBrush ConnectedBrush = new(ColorHelper.FromArgb(255, 16, 185, 129));
     private static readonly SolidColorBrush DisconnectedBrush = new(ColorHelper.FromArgb(255, 239, 68, 68));
@@ -42,7 +43,10 @@ public partial class ShellViewModel : ObservableObject
     private bool _isOpenAiConnected;
 
     [ObservableProperty]
-    private List<string> _availableModels = new();
+    private IReadOnlyList<ModelInfo> _availableModels = Array.Empty<ModelInfo>();
+
+    [ObservableProperty]
+    private ModelInfo? _selectedModelInfo;
 
     [ObservableProperty]
     private string? _selectedModel;
@@ -53,11 +57,13 @@ public partial class ShellViewModel : ObservableObject
     public ShellViewModel(
         ILinkedInClient linkedInClient,
         ISecureStorageService secureStorage,
-        ILocalDataService dataService)
+        ILocalDataService dataService,
+        IAIHubService? aiHub = null)
     {
         _linkedInClient = linkedInClient;
         _secureStorage = secureStorage;
         _dataService = dataService;
+        _aiHub = aiHub;
     }
 
     public async Task InitializeAsync()
@@ -75,44 +81,71 @@ public partial class ShellViewModel : ObservableObject
         OpenAiStatus = IsOpenAiConnected ? "Connected" : "Disconnected";
 
         // 3. Populate model selector
-        UpdateAvailableModels();
+        await UpdateAvailableModelsAsync();
 
-        // 4. Load config theme
+        // 4. Load config theme & model
         var config = await _dataService.LoadConfigAsync();
         CurrentTheme = config.Theme;
-        if (!string.IsNullOrEmpty(config.SelectedModel) && AvailableModels.Contains(config.SelectedModel))
+        if (!string.IsNullOrEmpty(config.SelectedModel))
         {
-            SelectedModel = config.SelectedModel;
+            var match = AvailableModels.FirstOrDefault(m => m.Id == config.SelectedModel || m.DisplayName == config.SelectedModel);
+            if (match != null)
+            {
+                SelectedModelInfo = match;
+                SelectedModel = match.Id;
+            }
         }
     }
 
     public void UpdateAvailableModels()
     {
-        var models = new List<string>();
+        _ = UpdateAvailableModelsAsync();
+    }
 
-        if (IsGeminiConnected)
-        {
-            models.Add("gemini-2.0-flash (Default)");
-            models.Add("gemini-2.5-flash");
-            models.Add("gemini-1.5-pro");
-        }
+    public async Task UpdateAvailableModelsAsync()
+    {
+        var models = new List<ModelInfo>();
 
-        if (IsOpenAiConnected)
+        if (_aiHub != null)
         {
-            models.Add("gpt-4o");
-            models.Add("gpt-4o-mini");
-            models.Add("o3-mini");
+            try
+            {
+                var hubModels = await _aiHub.GetAllAvailableModelsAsync();
+                if (hubModels != null && hubModels.Count > 0)
+                {
+                    models.AddRange(hubModels);
+                }
+            }
+            catch { }
         }
 
         if (models.Count == 0)
         {
-            models.Add("Connect an AI provider below");
+            if (IsGeminiConnected)
+            {
+                models.Add(new ModelInfo("gemini-2.0-flash", "Gemini 2.0 Flash (Default)", "Google Gemini", 1000000, 400, true));
+                models.Add(new ModelInfo("gemini-2.5-flash", "Gemini 2.5 Flash (Fast)", "Google Gemini", 1000000, 350, true));
+                models.Add(new ModelInfo("gemini-1.5-pro", "Gemini 1.5 Pro (Deep Reasoning)", "Google Gemini", 2000000, 850, true));
+            }
+
+            if (IsOpenAiConnected)
+            {
+                models.Add(new ModelInfo("gpt-4o", "GPT-4o (Omni)", "OpenAI", 128000, 450, true));
+                models.Add(new ModelInfo("gpt-4o-mini", "GPT-4o mini (Fast)", "OpenAI", 128000, 280, true));
+                models.Add(new ModelInfo("o3-mini", "o3-mini (Reasoning)", "OpenAI", 200000, 950, true));
+            }
+        }
+
+        if (models.Count == 0)
+        {
+            models.Add(new ModelInfo("none", "Connect an AI provider below", "None", 0, 0, false));
         }
 
         AvailableModels = models;
-        if (string.IsNullOrEmpty(SelectedModel) || !models.Contains(SelectedModel))
+        if (SelectedModelInfo == null || !models.Any(m => m.Id == SelectedModelInfo.Id))
         {
-            SelectedModel = models[0];
+            SelectedModelInfo = models[0];
+            SelectedModel = SelectedModelInfo.Id;
         }
     }
 
@@ -128,6 +161,7 @@ public partial class ShellViewModel : ObservableObject
     public async Task SelectModelAsync(string model)
     {
         SelectedModel = model;
+        SelectedModelInfo = AvailableModels.FirstOrDefault(m => m.Id == model || m.DisplayName == model);
         var config = await _dataService.LoadConfigAsync();
         await _dataService.SaveConfigAsync(config with { SelectedModel = model });
     }

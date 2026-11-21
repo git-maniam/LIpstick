@@ -68,21 +68,33 @@ public partial class ConnectViewModel : ObservableObject
     [RelayCommand]
     public async Task ToggleLinkedInConnectionAsync()
     {
-        if (IsLinkedInConnected)
+        try
         {
-            await _linkedInClient.DisconnectAsync();
-            IsLinkedInConnected = false;
-        }
-        else
-        {
-            // Reconnect
-            if (_linkedInClient is LIpstick.Infrastructure.LinkedIn.MockLinkedInClient mock)
+            if (IsLinkedInConnected)
             {
-                mock.CurrentState = LinkedInConnectionState.Connected;
+                await _linkedInClient.DisconnectAsync();
+                IsLinkedInConnected = false;
+                LinkedInUser = "Disconnected";
+                LinkedInHeadline = "Connect your profile to scan and optimize.";
             }
-            IsLinkedInConnected = true;
+            else
+            {
+                var session = await _linkedInClient.ConnectAsync();
+                IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
+                if (IsLinkedInConnected)
+                {
+                    LinkedInUser = session.FullName ?? "Connected Member";
+                    LinkedInHeadline = session.Headline ?? "Profile connected";
+                }
+            }
+            await _shellViewModel.InitializeAsync();
         }
-        await _shellViewModel.InitializeAsync();
+        catch (OperationCanceledException)
+        {
+            IsLinkedInConnected = false;
+            LinkedInUser = "Disconnected";
+            LinkedInHeadline = "Connection was cancelled.";
+        }
     }
 
     [RelayCommand]

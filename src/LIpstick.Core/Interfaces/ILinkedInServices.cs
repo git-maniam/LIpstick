@@ -4,6 +4,7 @@ namespace LIpstick.Core.Interfaces;
 
 public interface ILinkedInClient
 {
+    Task<LinkedInSessionInfo> ConnectAsync(CancellationToken cancellationToken = default);
     Task<LinkedInSessionInfo> GetSessionInfoAsync(CancellationToken cancellationToken = default);
     Task<LinkedInProfile> IngestProfileAsync(CancellationToken cancellationToken = default);
     Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default);
