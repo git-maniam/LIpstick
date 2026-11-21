@@ -75,7 +75,7 @@ public class MockAIProvider : IAIProvider
 
         if (SimulateTimeout)
         {
-            await Task.Delay(5000, cancellationToken);
+            await Task.Delay(SimulatedLatencyMs, cancellationToken);
             throw new TimeoutException("The AI provider request timed out.");
         }
 

@@ -7,54 +7,86 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer Padding="32,24">
-        <StackPanel Spacing="24" MaxWidth="800" HorizontalAlignment="Left">
-            <StackPanel Spacing="4">
-                <TextBlock Text="Settings &amp; Preferences" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock Text="Customize application appearance, AI preferences, and review local data privacy." Opacity="0.7" FontSize="14" />
+    <ScrollViewer Background="#F3F6FD" Padding="26,22" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="14" MaxWidth="1080">
+            <StackPanel Spacing="3" Margin="0,0,0,2">
+                <TextBlock Text="Settings" FontSize="30" FontWeight="Bold" Foreground="#14264F" />
+                <TextBlock Text="Manage your app preferences, AI models, and local data." FontSize="14" Foreground="#53678E" />
             </StackPanel>
+            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="#2874E8" />
 
-            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontWeight="SemiBold" Foreground="#10B981" FontSize="13" />
-
-            <!-- Appearance Theme Card -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Appearance Theme" FontWeight="SemiBold" FontSize="16" />
-                    <TextBlock Text="Select your visual preference. LIpstick supports Windows 11 Mica backdrop in both light and dark modes." Opacity="0.7" FontSize="13" />
-
-                    <RadioButtons x:Name="ThemeRadioButtons" SelectionChanged="ThemeRadioButtons_SelectionChanged">
-                        <RadioButton Content="Light (Default)" Tag="Light" />
-                        <RadioButton Content="Dark" Tag="Dark" />
-                        <RadioButton Content="Follow Windows System Theme" Tag="System" />
-                    </RadioButtons>
-                </StackPanel>
+            <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="14" Padding="18">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="260" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE7F4;" FontSize="25" Foreground="#5274B4" />
+                        <StackPanel Spacing="3"><TextBlock Text="Appearance" FontSize="15" FontWeight="SemiBold" Foreground="#17284D" /><TextBlock Text="Choose how LIpstick looks." FontSize="11" Foreground="#667796" /></StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="Light" Command="{x:Bind ViewModel.SetThemeCommand}" CommandParameter="Light" Style="{x:Bind ViewModel.CurrentTheme, Mode=OneWay, Converter={StaticResource SectionTabStyleConverter}, ConverterParameter=Light}" />
+                        <Button Content="Dark" Command="{x:Bind ViewModel.SetThemeCommand}" CommandParameter="Dark" Style="{x:Bind ViewModel.CurrentTheme, Mode=OneWay, Converter={StaticResource SectionTabStyleConverter}, ConverterParameter=Dark}" />
+                        <Button Content="System" Command="{x:Bind ViewModel.SetThemeCommand}" CommandParameter="System" Style="{x:Bind ViewModel.CurrentTheme, Mode=OneWay, Converter={StaticResource SectionTabStyleConverter}, ConverterParameter=System}" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- AI Model & Custom Endpoints Card (SPEC 3.2 & Issue #3) -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="AI Model &amp; Custom Endpoints" FontWeight="SemiBold" FontSize="16" />
-                    <TextBlock Text="Configure active model and routing to custom proxies, gateways, or enterprise endpoints." Opacity="0.7" FontSize="13" />
-
-                    <TextBox Header="Google Gemini Base URL" PlaceholderText="https://generativelanguage.googleapis.com" Text="{x:Bind ViewModel.GeminiCustomBaseUrl, Mode=TwoWay}" />
-                    <TextBox Header="OpenAI Base URL" PlaceholderText="https://api.openai.com/v1" Text="{x:Bind ViewModel.OpenAiCustomBaseUrl, Mode=TwoWay}" />
-
-                    <Button Content="Save AI Endpoints" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.SaveEndpointsCommand}" Margin="0,8,0,0" />
-                </StackPanel>
+            <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="14" Padding="18">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="260" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Top">
+                        <FontIcon Glyph="&#xE713;" FontSize="25" Foreground="#5274B4" />
+                        <StackPanel Spacing="3"><TextBlock Text="AI provider defaults" FontSize="15" FontWeight="SemiBold" Foreground="#17284D" /><TextBlock Text="Choose the model used for new drafts." FontSize="11" Foreground="#667796" /></StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="10">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4"><TextBlock Text="Default model" FontSize="11" FontWeight="SemiBold" Foreground="#53678E" /><ComboBox ItemsSource="{x:Bind ViewModel.AvailableModels}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{x:Bind ViewModel.SelectedModel, Mode=TwoWay}" /></StackPanel>
+                            <TextBlock Grid.Column="1" Text="Model availability follows your connected providers." FontSize="11" Foreground="#667796" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </Grid>
+                        <Expander Header="Custom provider endpoints" IsExpanded="False">
+                            <Grid ColumnSpacing="10" Padding="0,8,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBox Header="Gemini base URL" PlaceholderText="https://generativelanguage.googleapis.com" Text="{x:Bind ViewModel.GeminiCustomBaseUrl, Mode=TwoWay}" />
+                                <TextBox Grid.Column="1" Header="OpenAI base URL" PlaceholderText="https://api.openai.com/v1" Text="{x:Bind ViewModel.OpenAiCustomBaseUrl, Mode=TwoWay}" />
+                                <Button Grid.Column="2" Content="Save endpoints" Command="{x:Bind ViewModel.SaveEndpointsCommand}" VerticalAlignment="Bottom" />
+                            </Grid>
+                        </Expander>
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- Local Data & Privacy Card -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Local Storage &amp; Privacy (DPAPI Protected)" FontWeight="SemiBold" FontSize="16" />
-                    <TextBlock Text="All API keys and session tokens are encrypted locally with Windows Credential Locker / DPAPI. Private profile data is never uploaded to telemetry." Opacity="0.7" FontSize="13" />
+            <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="14" Padding="18">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="260" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE72E;" FontSize="25" Foreground="#5274B4" />
+                        <StackPanel Spacing="3"><TextBlock Text="Privacy &amp; data" FontSize="15" FontWeight="SemiBold" Foreground="#17284D" /><TextBlock Text="Your credentials and work stay on this device." FontSize="11" Foreground="#667796" /></StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="Provider keys and LinkedIn tokens are protected with Windows DPAPI. Profile data and drafts are stored locally." FontSize="12" Foreground="#53678E" TextWrapping="Wrap" />
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="Local data location" FontSize="11" Foreground="#667796" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1" Text="{x:Bind ViewModel.DataDirectory, Mode=OneWay}" IsReadOnly="True" />
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
-                    <TextBox Header="Data Directory" Text="{x:Bind ViewModel.DataDirectory, Mode=OneWay}" IsReadOnly="True" />
-
-                    <HyperlinkButton Content="View Privacy &amp; Local Storage Statement" NavigateUri="https://github.com/microsoft/WindowsAppSDK" Margin="0,4,0,0" />
-
-                    <Button Content="Clear Local Data" Style="{ThemeResource AccentButtonStyle}" Background="#EF4444" Foreground="White" Click="ClearDataButton_Click" Margin="0,8,0,0" />
-                </StackPanel>
+            <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="14" Padding="18">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="260" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE74D;" FontSize="25" Foreground="#B44952" />
+                        <StackPanel Spacing="3"><TextBlock Text="Export &amp; delete" FontSize="15" FontWeight="SemiBold" Foreground="#17284D" /><TextBlock Text="Manage your local LIpstick data." FontSize="11" Foreground="#667796" /></StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="10">
+                        <Button Content="Clear local data" Background="#FFF0F0" Foreground="#A32936" Click="ClearDataButton_Click" HorizontalAlignment="Left" />
+                        <Border Background="#FFF0F0" CornerRadius="10" Padding="12,9">
+                            <TextBlock Text="Clearing data permanently removes local history, settings, and protected credentials. This action cannot be undone." FontSize="11" Foreground="#87323B" TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
             </Border>
         </StackPanel>
     </ScrollViewer>

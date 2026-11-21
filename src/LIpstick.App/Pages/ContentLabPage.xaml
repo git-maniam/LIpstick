@@ -8,67 +8,71 @@
     xmlns:models="using:LIpstick.Core.Models"
     mc:Ignorable="d">
 
-    <Grid Padding="32,24">
+    <Grid Background="#F3F6FD" Padding="24,20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-        <!-- Header with Safety Notice (T6 Gate) -->
-        <StackPanel Spacing="6" Margin="0,0,0,16">
-            <TextBlock Text="Content Lab (11 LinkedIn Skills)" FontSize="24" FontWeight="SemiBold" />
-            <Border Background="#100A66C2" BorderBrush="#300A66C2" BorderThickness="1" CornerRadius="8" Padding="12,6" HorizontalAlignment="Left">
+        <StackPanel Spacing="3" Margin="0,0,0,12">
+            <TextBlock Text="Content Lab" FontSize="30" FontWeight="Bold" Foreground="#14264F" />
+            <TextBlock Text="Create, refine, and repurpose content for LinkedIn." FontSize="14" Foreground="#53678E" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Spacing="10" Margin="0,0,0,14">
+            <GridView ItemsSource="{x:Bind ViewModel.Skills, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedSkill, Mode=TwoWay}" SelectionMode="Single" IsItemClickEnabled="False" Height="92" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.VerticalScrollMode="Disabled">
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="6" ItemWidth="156" ItemHeight="40" /></ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+                <GridView.ItemTemplate>
+                    <DataTemplate x:DataType="models:SkillToolDefinition">
+                        <Border Background="#FFFFFF" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="10" Padding="12,7" Margin="3">
+                            <TextBlock Text="{x:Bind NavigationLabel}" FontSize="12" FontWeight="SemiBold" Foreground="#233B69" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+            <Border Background="#FFF0F0" BorderBrush="#F4D3D6" BorderThickness="1" CornerRadius="10" Padding="12,8">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE7BA;" Foreground="#0A66C2" FontSize="14" />
-                    <TextBlock Text="All generated content is drafted for your review and is NEVER published or sent automatically." FontSize="12" Opacity="0.8" />
+                    <FontIcon Glyph="&#xE7BA;" Foreground="#B33A46" FontSize="14" />
+                    <TextBlock Text="Nothing is posted or sent automatically. Review every draft before copying or using it." FontSize="12" Foreground="#87323B" />
                 </StackPanel>
             </Border>
         </StackPanel>
 
-        <!-- Main Workspace -->
-        <Grid Grid.Row="1" ColumnSpacing="20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Left: 11 Skills Selection List -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
-                <ListView ItemsSource="{x:Bind ViewModel.Skills, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedSkill, Mode=TwoWay}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="models:SkillToolDefinition">
-                            <StackPanel Spacing="2" Padding="4,6">
-                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="13" />
-                                <TextBlock Text="{x:Bind Description}" Opacity="0.6" FontSize="11" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+        <Grid Grid.Row="2" ColumnSpacing="12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="14" Padding="16">
+                <Grid RowSpacing="10">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Border Background="#E7EEFF" CornerRadius="10" Padding="10,6" HorizontalAlignment="Stretch">
+                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE8A5;" Foreground="#2874E8" /><TextBlock Text="{x:Bind ViewModel.ActiveToolTitle, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="#1A315F" /></StackPanel>
+                    </Border>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="8">
+                            <TextBox Header="{x:Bind ViewModel.InputOneHeader, Mode=OneWay}" PlaceholderText="Enter information you can verify." Text="{x:Bind ViewModel.InputOne, Mode=TwoWay}" AcceptsReturn="True" MinHeight="72" TextWrapping="Wrap" />
+                            <TextBox Header="{x:Bind ViewModel.InputTwoHeader, Mode=OneWay}" Text="{x:Bind ViewModel.InputTwo, Mode=TwoWay}" AcceptsReturn="True" MinHeight="58" TextWrapping="Wrap" Visibility="{x:Bind ViewModel.HideInputTwo, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                            <TextBox Header="{x:Bind ViewModel.InputThreeHeader, Mode=OneWay}" Text="{x:Bind ViewModel.InputThree, Mode=TwoWay}" AcceptsReturn="True" MinHeight="58" TextWrapping="Wrap" Visibility="{x:Bind ViewModel.HideInputThree, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                            <TextBox Header="{x:Bind ViewModel.InputFourHeader, Mode=OneWay}" Text="{x:Bind ViewModel.InputFour, Mode=TwoWay}" AcceptsReturn="True" MinHeight="58" TextWrapping="Wrap" Visibility="{x:Bind ViewModel.HideInputFour, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                            <TextBox Header="{x:Bind ViewModel.InputFiveHeader, Mode=OneWay}" Text="{x:Bind ViewModel.InputFive, Mode=TwoWay}" AcceptsReturn="True" MinHeight="58" TextWrapping="Wrap" Visibility="{x:Bind ViewModel.HideInputFive, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                        </StackPanel>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="2" Spacing="6">
+                        <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontSize="11" Foreground="#2874E8" TextWrapping="Wrap" />
+                        <Button Content="Run tool" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.GenerateSelectedSkillCommand}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- Right: Interactive Generator Surface -->
-            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-                <ScrollViewer>
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="Feed Post Generator (li-post)" FontSize="18" FontWeight="SemiBold" />
-
-                        <TextBox Header="Core Topic / Thesis" Text="{x:Bind ViewModel.PostTopic, Mode=TwoWay}" PlaceholderText="What is the key takeaway?" />
-                        <TextBox Header="Target Audience" Text="{x:Bind ViewModel.PostAudience, Mode=TwoWay}" PlaceholderText="e.g. B2B Ops Leaders" />
-                        <TextBox Header="Verifiable Outcome / Metric" Text="{x:Bind ViewModel.PostMetric, Mode=TwoWay}" PlaceholderText="e.g. 12 hours/week, $45,000" />
-
-                        <Button Content="Generate Post Draft" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.GeneratePostCommand}" />
-
-                        <TextBlock Text="{x:Bind ViewModel.PostStatus, Mode=OneWay}" Foreground="#10B981" FontWeight="SemiBold" FontSize="12" />
-
-                        <TextBox
-                            Header="Copy-Ready Post (Zero Outbound Links, Max 3 Hashtags)"
-                            Text="{x:Bind ViewModel.GeneratedPost, Mode=OneWay}"
-                            IsReadOnly="True"
-                            TextWrapping="Wrap"
-                            AcceptsReturn="True"
-                            MinHeight="180" />
+            <Border Grid.Column="1" Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="14" Padding="16">
+                <Grid RowSpacing="10">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Output · not sent" FontSize="15" FontWeight="SemiBold" Foreground="#1A315F" />
+                        <TextBlock Text="Review the analysis or edit the draft before using it." FontSize="11" Foreground="#667796" />
                     </StackPanel>
-                </ScrollViewer>
+                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.ResultText, Mode=TwoWay}" PlaceholderText="This tool's output will appear here." TextWrapping="Wrap" AcceptsReturn="True" MinHeight="200" />
+                    <TextBlock Grid.Row="2" Text="Nothing is posted or sent automatically." FontSize="11" Foreground="#667796" TextWrapping="Wrap" />
+                </Grid>
             </Border>
         </Grid>
     </Grid>

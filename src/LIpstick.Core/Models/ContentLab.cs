@@ -6,7 +6,24 @@ public record SkillToolDefinition(
     string Category,
     string Description,
     IReadOnlyList<string> RequiredInputs
-);
+)
+{
+    public string NavigationLabel => Id switch
+    {
+        "li-post" => "Posts",
+        "li-carousel" => "Carousel",
+        "li-comment" => "Comments",
+        "li-reply" => "Replies",
+        "li-profile" => "Profile",
+        "li-plan" => "Weekly Plan",
+        "li-dm" => "DM",
+        "li-inbox" => "Inbox",
+        "li-audit" => "Audit",
+        "li-repurpose" => "Repurpose",
+        "li-human" => "Clean & Score",
+        _ => Name
+    };
+}
 
 public record PostDraftRequest(
     string TopicOrIdea,

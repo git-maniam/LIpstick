@@ -416,26 +416,75 @@ What's your take on automated ops?";
             await storage.StoreSecretAsync("OPENAI_API_KEY", "openai-secret");
 
             var geminiResponse = """{"candidates":[{"content":{"parts":[{"text":"Gemini draft"}]}}],"usageMetadata":{"promptTokenCount":21,"candidatesTokenCount":7}}""";
-            var gemini = new GeminiProvider(storage, new HttpClient(new MockHttpMessageHandler { ResponseContent = geminiResponse }));
+            var geminiHandler = new MockHttpMessageHandler { ResponseContent = geminiResponse };
+            var gemini = new GeminiProvider(storage, new HttpClient(geminiHandler)) { CustomBaseUrl = "https://gemini-gateway.test" };
             var geminiResult = await gemini.GenerateCompletionAsync(new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gemini-2.0-flash"));
             Assert.AreEqual("Gemini draft", geminiResult.Text);
             Assert.AreEqual(21, geminiResult.PromptTokenCount);
             Assert.AreEqual(7, geminiResult.ResponseTokenCount);
             Assert.AreEqual("gemini-2.0-flash", geminiResult.ModelId);
+            Assert.AreEqual("https://gemini-gateway.test/v1/models/gemini-2.0-flash:generateContent", geminiHandler.LastRequest?.RequestUri?.ToString());
 
             var openAiResponse = """{"choices":[{"message":{"content":"OpenAI draft"}}],"usage":{"prompt_tokens":34,"completion_tokens":9}}""";
-            var openAi = new OpenAIProvider(storage, new HttpClient(new MockHttpMessageHandler { ResponseContent = openAiResponse }));
+            var openAiHandler = new MockHttpMessageHandler { ResponseContent = openAiResponse };
+            var openAi = new OpenAIProvider(storage, new HttpClient(openAiHandler)) { CustomBaseUrl = "https://openai-gateway.test/v1" };
             var openAiResult = await openAi.GenerateCompletionAsync(new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gpt-4o"));
             Assert.AreEqual("OpenAI draft", openAiResult.Text);
             Assert.AreEqual(34, openAiResult.PromptTokenCount);
             Assert.AreEqual(9, openAiResult.ResponseTokenCount);
             Assert.AreEqual("gpt-4o", openAiResult.ModelId);
+            Assert.AreEqual("https://openai-gateway.test/v1/chat/completions", openAiHandler.LastRequest?.RequestUri?.ToString());
             Assert.IsTrue(geminiResult.LatencyMilliseconds >= 0 && openAiResult.LatencyMilliseconds >= 0);
         }
         finally
         {
             try { Directory.Delete(tempDir, true); } catch { }
         }
+    }
+
+    [TestMethod]
+    public async Task AI_01e_Live_SDK_Adapters_Honor_Cancellation()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ai_sdk_cancel_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var storage = new DpapiSecureStorageService(Path.Combine(tempDir, "vault.dat"));
+            await storage.StoreSecretAsync("GEMINI_API_KEY", "gemini-secret");
+            await storage.StoreSecretAsync("OPENAI_API_KEY", "openai-secret");
+            var request = new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gemini-2.0-flash");
+
+            var gemini = new GeminiProvider(storage, new HttpClient(new MockHttpMessageHandler { SimulatedDelayMs = 1000 }));
+            using var geminiCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+            await Assert.ThrowsExactlyAsync<TaskCanceledException>(() => gemini.GenerateCompletionAsync(request, geminiCancellation.Token));
+
+            var openAi = new OpenAIProvider(storage, new HttpClient(new MockHttpMessageHandler { SimulatedDelayMs = 1000 }));
+            using var openAiCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+            await Assert.ThrowsExactlyAsync<TaskCanceledException>(() => openAi.GenerateCompletionAsync(request with { ModelName = "gpt-4o" }, openAiCancellation.Token));
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [TestMethod]
+    public async Task AI_04c_AIHub_Routes_Selected_Models_To_The_Matching_Provider()
+    {
+        var gemini = new MockAIProvider("Google Gemini") { CustomRecommendationText = "Gemini result" };
+        var openAi = new MockAIProvider("OpenAI") { CustomRecommendationText = "OpenAI result" };
+        var hub = new AIHubService(new IAIProvider[] { gemini, openAi });
+        var models = await hub.GetAllAvailableModelsAsync();
+
+        Assert.IsTrue(models.Any(model => model.Id == "gemini-2.0-flash"));
+        Assert.IsTrue(models.Any(model => model.Id == "gpt-4o"));
+        Assert.AreSame(gemini, hub.ResolveProviderForModel("gemini-2.0-flash"));
+        Assert.AreSame(openAi, hub.ResolveProviderForModel("gpt-4o"));
+
+        var geminiResult = await hub.GenerateRecommendationAsync(new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gemini-2.0-flash"));
+        var openAiResult = await hub.GenerateRecommendationAsync(new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gpt-4o"));
+        Assert.AreEqual("Gemini result", geminiResult);
+        Assert.AreEqual("OpenAI result", openAiResult);
     }
 
     [TestMethod]

@@ -16,24 +16,7 @@ public sealed partial class SettingsPage : Page
         Loaded += async (s, e) =>
         {
             await ViewModel.InitializeAsync();
-            ThemeRadioButtons.SelectedIndex = ViewModel.CurrentTheme switch
-            {
-                "Dark" => 1,
-                "System" => 2,
-                _ => 0
-            };
         };
-    }
-
-    private async void ThemeRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (sender is RadioButtons rb && rb.SelectedItem is RadioButton { Tag: string theme })
-        {
-            if (theme != ViewModel.CurrentTheme)
-            {
-                await ViewModel.SetThemeAsync(theme);
-            }
-        }
     }
 
     private async void ClearDataButton_Click(object sender, RoutedEventArgs e)

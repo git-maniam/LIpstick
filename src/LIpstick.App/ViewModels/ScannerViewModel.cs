@@ -14,16 +14,19 @@ public partial class ScannerViewModel : ObservableObject
     private bool _isScanning;
 
     [ObservableProperty]
-    private string _profileName = "Alex Vance";
+    private string _profileName = "LinkedIn profile";
 
     [ObservableProperty]
-    private string _profileHeadline = "Senior Product Manager at Acme Corp | Passionate about building enterprise tech";
+    private string _profileHeadline = "Connect LinkedIn to review your current profile.";
 
     [ObservableProperty]
-    private int _totalScore = 42;
+    private int _totalScore;
 
     [ObservableProperty]
-    private string _scoreVerdict = "Needs Attention";
+    private string _scoreVerdict = "Not scanned";
+
+    [ObservableProperty]
+    private string _statusMessage = "Connect LinkedIn to scan your profile.";
 
     [ObservableProperty]
     private List<RubricCategoryScore> _categoryScores = new();
@@ -48,9 +51,23 @@ public partial class ScannerViewModel : ObservableObject
         IsScanning = true;
         try
         {
+            var session = await _linkedInClient.GetSessionInfoAsync();
+            if (session.State != LinkedInConnectionState.Connected)
+            {
+                StatusMessage = "Connect LinkedIn from Connections before scanning a profile.";
+                ProfileName = "LinkedIn profile";
+                ProfileHeadline = "Your profile details will appear here after connecting.";
+                TotalScore = 0;
+                ScoreVerdict = "Not scanned";
+                CategoryScores = new();
+                FixFirstItems = new();
+                return;
+            }
+
             var profile = await _linkedInClient.IngestProfileAsync();
             ProfileName = profile.FullName;
             ProfileHeadline = profile.Headline;
+            StatusMessage = string.Empty;
 
             var evaluation = _evaluator.EvaluateProfile(profile);
             TotalScore = evaluation.TotalScore;
@@ -64,6 +81,10 @@ public partial class ScannerViewModel : ObservableObject
 
             CategoryScores = evaluation.Categories.ToList();
             FixFirstItems = evaluation.FixFirstCategories.ToList();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
         }
         finally
         {

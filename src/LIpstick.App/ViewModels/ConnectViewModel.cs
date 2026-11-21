@@ -10,12 +10,13 @@ public partial class ConnectViewModel : ObservableObject
     private readonly ILinkedInClient _linkedInClient;
     private readonly ISecureStorageService _secureStorage;
     private readonly ShellViewModel _shellViewModel;
+    private readonly IAIHubService _aiHub;
 
     [ObservableProperty]
-    private string _linkedInUser = "Alex Vance";
+    private string _linkedInUser = "Not connected";
 
     [ObservableProperty]
-    private string _linkedInHeadline = "Senior Product Manager at Acme Corp";
+    private string _linkedInHeadline = "Connect your profile to scan and optimize.";
 
     [ObservableProperty]
     private bool _isLinkedInConnected;
@@ -47,11 +48,13 @@ public partial class ConnectViewModel : ObservableObject
     public ConnectViewModel(
         ILinkedInClient linkedInClient,
         ISecureStorageService secureStorage,
-        ShellViewModel shellViewModel)
+        ShellViewModel shellViewModel,
+        IAIHubService aiHub)
     {
         _linkedInClient = linkedInClient;
         _secureStorage = secureStorage;
         _shellViewModel = shellViewModel;
+        _aiHub = aiHub;
     }
 
     public async Task InitializeAsync()
@@ -62,7 +65,7 @@ public partial class ConnectViewModel : ObservableObject
         if (IsLinkedInConnected)
         {
             LinkedInUser = session.FullName ?? "Connected Member";
-            LinkedInHeadline = session.Headline ?? "Profile connected";
+            LinkedInHeadline = session.Headline ?? "Profile identity connected; headline is unavailable with the granted LinkedIn permissions.";
         }
 
         IsGeminiConnected = await _secureStorage.HasSecretAsync("GEMINI_API_KEY");
@@ -92,7 +95,7 @@ public partial class ConnectViewModel : ObservableObject
                 if (IsLinkedInConnected)
                 {
                     LinkedInUser = session.FullName ?? "Connected Member";
-                    LinkedInHeadline = session.Headline ?? "Profile connected";
+                    LinkedInHeadline = session.Headline ?? "Profile identity connected; headline is unavailable with the granted LinkedIn permissions.";
                 }
             }
             await _shellViewModel.InitializeAsync();
@@ -128,14 +131,8 @@ public partial class ConnectViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveGeminiKeyAsync()
     {
-        if (!string.IsNullOrWhiteSpace(GeminiApiKey))
-        {
-            await _secureStorage.StoreSecretAsync("GEMINI_API_KEY", GeminiApiKey.Trim());
-            GeminiApiKey = "";
-            IsGeminiConnected = true;
-            GeminiStatusMessage = "Connected successfully. Models loaded.";
-            await _shellViewModel.InitializeAsync();
-        }
+        await SaveAndValidateProviderKeyAsync("GEMINI_API_KEY", GeminiApiKey, "gemini-2.0-flash", "Gemini");
+        GeminiApiKey = "";
     }
 
     [RelayCommand]
@@ -150,13 +147,59 @@ public partial class ConnectViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveOpenAiKeyAsync()
     {
-        if (!string.IsNullOrWhiteSpace(OpenAiApiKey))
+        await SaveAndValidateProviderKeyAsync("OPENAI_API_KEY", OpenAiApiKey, "gpt-4o-mini", "OpenAI");
+        OpenAiApiKey = "";
+    }
+
+    private async Task SaveAndValidateProviderKeyAsync(string storageKey, string candidate, string modelId, string providerName)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
         {
-            await _secureStorage.StoreSecretAsync("OPENAI_API_KEY", OpenAiApiKey.Trim());
-            OpenAiApiKey = "";
-            IsOpenAiConnected = true;
-            OpenAiStatusMessage = "Connected successfully. Models loaded.";
+            SetProviderStatus(providerName, false, $"Enter a {providerName} API key.");
+            return;
+        }
+
+        string? previousKey = await _secureStorage.GetSecretAsync(storageKey);
+        await _secureStorage.StoreSecretAsync(storageKey, candidate.Trim());
+        try
+        {
+            var validationRequest = new RecommendationRequest(
+                "credential validation",
+                "Reply with OK.",
+                string.Empty,
+                new Dictionary<string, object>(),
+                modelId);
+            await _aiHub.GenerateCompletionAsync(validationRequest);
+            SetProviderStatus(providerName, true, "Connected and verified.");
             await _shellViewModel.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            if (string.IsNullOrEmpty(previousKey))
+                await _secureStorage.DeleteSecretAsync(storageKey);
+            else
+                await _secureStorage.StoreSecretAsync(storageKey, previousKey);
+
+            string status = ex is AIProviderException providerError
+                ? $"Could not verify {providerName} key ({providerError.ErrorCode ?? "provider error"}). Check the key, quota, and endpoint."
+                : $"Could not verify {providerName} key. Check network access and endpoint settings.";
+            if (!string.IsNullOrEmpty(previousKey))
+                status += " The previous key was restored.";
+            SetProviderStatus(providerName, !string.IsNullOrEmpty(previousKey), status);
+        }
+    }
+
+    private void SetProviderStatus(string providerName, bool connected, string status)
+    {
+        if (providerName == "Gemini")
+        {
+            IsGeminiConnected = connected;
+            GeminiStatusMessage = status;
+        }
+        else
+        {
+            IsOpenAiConnected = connected;
+            OpenAiStatusMessage = status;
         }
     }
 

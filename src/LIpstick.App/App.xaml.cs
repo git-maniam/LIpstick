@@ -43,7 +43,7 @@ public partial class App : Application
         services.AddSingleton<MockAIProvider>();
         services.AddSingleton<IAIProvider>(sp => sp.GetRequiredService<GeminiProvider>());
         services.AddSingleton<IAIProvider>(sp => sp.GetRequiredService<OpenAIProvider>());
-        services.AddSingleton<IAIHubService, AIHubService>();
+        services.AddSingleton<IAIHubService>(sp => new AIHubService(sp.GetServices<IAIProvider>()));
 
         // ViewModels
         services.AddSingleton<ShellViewModel>();

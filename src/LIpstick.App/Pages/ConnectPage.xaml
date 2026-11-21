@@ -7,93 +7,137 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer Padding="32,24">
-        <StackPanel Spacing="24" MaxWidth="800" HorizontalAlignment="Left">
-            <StackPanel Spacing="4">
-                <TextBlock Text="Connections &amp; Accounts" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock Text="Connect your LinkedIn profile and configure AI model providers. Credentials are stored securely using Windows Data Protection (DPAPI)." Opacity="0.7" FontSize="14" />
-            </StackPanel>
+    <ScrollViewer Background="#F3F6FD" VerticalScrollBarVisibility="Auto">
+        <Grid Padding="30,26,30,32">
+            <StackPanel Spacing="18" MaxWidth="1080" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="Connections" FontSize="30" FontWeight="Bold" Foreground="#14264F" />
+                    <TextBlock Text="Connect your accounts and AI providers to unlock all features." FontSize="15" Foreground="#53678E" />
+                </StackPanel>
 
-            <!-- LinkedIn Card -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Padding="20">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <Border Background="#E5EEFF" BorderBrush="#CCDDFE" BorderThickness="1" CornerRadius="12" Padding="16,13">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE946;" FontSize="18" Foreground="#2874E8" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="The model dropdown needs at least one AI provider connected (OpenAI or Gemini). Connect either provider, or both, and choose your preferred model." TextWrapping="Wrap" Foreground="#213B69" FontSize="13" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
 
-                    <StackPanel Spacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE71B;" Foreground="#0A66C2" FontSize="18" />
-                            <TextBlock Text="LinkedIn Profile" FontWeight="SemiBold" FontSize="16" />
-                            <Border Background="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="4" Padding="6,2" Margin="6,0,0,0">
-                                <TextBlock Text="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="10" FontWeight="Bold" />
-                            </Border>
+                <!-- LinkedIn connection -->
+                <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnSpacing="16" RowSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="54" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border Width="48" Height="48" CornerRadius="10" Background="#E7F1FF" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE71B;" FontSize="26" Foreground="#0A66C2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                            <TextBlock Text="LinkedIn" FontSize="17" FontWeight="SemiBold" Foreground="#17284D" />
+                            <TextBlock Text="Connect your profile to scan, improve, and create content." FontSize="12" Foreground="#566A8E" TextWrapping="Wrap" />
+                            <TextBlock Text="{x:Bind ViewModel.LinkedInUser, Mode=OneWay}" FontSize="12" Foreground="#344A70" />
+                            <TextBlock Text="{x:Bind ViewModel.LinkedInStatusMessage, Mode=OneWay}" FontSize="11" Foreground="#667796" TextWrapping="Wrap" />
                         </StackPanel>
-                        <TextBlock Text="{x:Bind ViewModel.LinkedInUser, Mode=OneWay}" FontWeight="Medium" FontSize="14" />
-                        <TextBlock Text="{x:Bind ViewModel.LinkedInHeadline, Mode=OneWay}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
-                        <TextBlock Text="{x:Bind ViewModel.LinkedInStatusMessage, Mode=OneWay}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
-                        <TextBox Header="LinkedIn Client ID" Text="{x:Bind ViewModel.LinkedInClientId, Mode=TwoWay}" />
-                        <Button Content="Save LinkedIn Client ID" Command="{x:Bind ViewModel.SaveLinkedInCredentialsCommand}" HorizontalAlignment="Left" />
-                    </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <Border Background="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="14" Padding="10,5">
+                                <TextBlock Text="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                            </Border>
+                            <Button Content="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToDisconnectButtonTextConverter}}" Command="{x:Bind ViewModel.ToggleLinkedInConnectionCommand}" MinWidth="92" />
+                        </StackPanel>
+                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnSpacing="10" Visibility="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Header="LinkedIn Client ID" PlaceholderText="Client ID from your LinkedIn developer app" Text="{x:Bind ViewModel.LinkedInClientId, Mode=TwoWay}" />
+                            <Button Grid.Column="1" Content="Save Client ID" Command="{x:Bind ViewModel.SaveLinkedInCredentialsCommand}" VerticalAlignment="Bottom" />
+                        </Grid>
+                    </Grid>
+                </Border>
 
-                    <Button Grid.Column="1" VerticalAlignment="Center" Content="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToDisconnectButtonTextConverter}}" Command="{x:Bind ViewModel.ToggleLinkedInConnectionCommand}" />
-                </Grid>
-            </Border>
-
-            <!-- Google Gemini Card -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Padding="20">
-                <StackPanel Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE72D;" Foreground="#4285F4" FontSize="18" />
-                        <TextBlock Text="Google Gemini (Gemini 2.5 / 2.0 / 1.5)" FontWeight="SemiBold" FontSize="16" />
-                        <Border Background="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="4" Padding="6,2" Margin="6,0,0,0">
-                            <TextBlock Text="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="10" FontWeight="Bold" />
-                        </Border>
-                    </StackPanel>
-
-                    <TextBlock Text="{x:Bind ViewModel.GeminiStatusMessage, Mode=OneWay}" Opacity="0.7" FontSize="13" />
-
-                    <Grid ColumnSpacing="12">
+                <!-- Gemini connection -->
+                <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnSpacing="16" RowSpacing="10">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="54" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <PasswordBox PlaceholderText="Enter Google AI Studio / Gemini API Key (AIza...)" Password="{x:Bind ViewModel.GeminiApiKey, Mode=TwoWay}" />
-                        <Button Grid.Column="1" Content="Save &amp; Connect" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.SaveGeminiKeyCommand}" />
-                        <Button Grid.Column="2" Content="Disconnect" Visibility="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay}" Command="{x:Bind ViewModel.DisconnectGeminiCommand}" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- OpenAI Card -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="10" Padding="20">
-                <StackPanel Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE946;" Foreground="#10A37F" FontSize="18" />
-                        <TextBlock Text="OpenAI (GPT-4o / o3-mini)" FontWeight="SemiBold" FontSize="16" />
-                        <Border Background="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="4" Padding="6,2" Margin="6,0,0,0">
-                            <TextBlock Text="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="10" FontWeight="Bold" />
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border Width="48" Height="48" CornerRadius="10" Background="#EDF2FF" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE8D4;" FontSize="25" Foreground="#6485F5" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                    </StackPanel>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                            <TextBlock Text="Google Gemini" FontSize="17" FontWeight="SemiBold" Foreground="#17284D" />
+                            <TextBlock Text="Use Gemini models for profile analysis and content generation." FontSize="12" Foreground="#566A8E" TextWrapping="Wrap" />
+                            <TextBlock Text="{x:Bind ViewModel.GeminiStatusMessage, Mode=OneWay}" FontSize="11" Foreground="#667796" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <Border Background="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="14" Padding="10,5">
+                                <TextBlock Text="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                            </Border>
+                            <Button Content="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay, Converter={StaticResource BoolToDisconnectButtonTextConverter}}" Command="{x:Bind ViewModel.DisconnectGeminiCommand}" MinWidth="92" Visibility="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay}" />
+                        </StackPanel>
+                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnSpacing="10" Visibility="{x:Bind ViewModel.IsGeminiConnected, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox PlaceholderText="Enter Google AI Studio / Gemini API key" Password="{x:Bind ViewModel.GeminiApiKey, Mode=TwoWay}" />
+                            <Button Grid.Column="1" Content="Save &amp; Connect" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.SaveGeminiKeyCommand}" VerticalAlignment="Bottom" />
+                        </Grid>
+                    </Grid>
+                </Border>
 
-                    <TextBlock Text="{x:Bind ViewModel.OpenAiStatusMessage, Mode=OneWay}" Opacity="0.7" FontSize="13" />
-
-                    <Grid ColumnSpacing="12">
+                <!-- OpenAI connection -->
+                <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnSpacing="16" RowSpacing="10">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="54" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <PasswordBox PlaceholderText="Enter OpenAI API Key (sk-...)" Password="{x:Bind ViewModel.OpenAiApiKey, Mode=TwoWay}" />
-                        <Button Grid.Column="1" Content="Save &amp; Connect" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.SaveOpenAiKeyCommand}" />
-                        <Button Grid.Column="2" Content="Disconnect" Visibility="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay}" Command="{x:Bind ViewModel.DisconnectOpenAiCommand}" />
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border Width="48" Height="48" CornerRadius="10" Background="#EAF7F4" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE946;" FontSize="25" Foreground="#10A37F" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                            <TextBlock Text="OpenAI" FontSize="17" FontWeight="SemiBold" Foreground="#17284D" />
+                            <TextBlock Text="Use OpenAI models to improve your profile and generate content." FontSize="12" Foreground="#566A8E" TextWrapping="Wrap" />
+                            <TextBlock Text="{x:Bind ViewModel.OpenAiStatusMessage, Mode=OneWay}" FontSize="11" Foreground="#667796" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <Border Background="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay, Converter={StaticResource ConnectionColorConverter}}" CornerRadius="14" Padding="10,5">
+                                <TextBlock Text="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay, Converter={StaticResource BoolToConnectedTextConverter}}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                            </Border>
+                            <Button Content="Disconnect" Command="{x:Bind ViewModel.DisconnectOpenAiCommand}" MinWidth="92" Visibility="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay}" />
+                        </StackPanel>
+                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnSpacing="10" Visibility="{x:Bind ViewModel.IsOpenAiConnected, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox PlaceholderText="Enter OpenAI API key" Password="{x:Bind ViewModel.OpenAiApiKey, Mode=TwoWay}" />
+                            <Button Grid.Column="1" Content="Save &amp; Connect" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.SaveOpenAiKeyCommand}" VerticalAlignment="Bottom" />
+                        </Grid>
                     </Grid>
-                </StackPanel>
-            </Border>
-        </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
     </ScrollViewer>
 </Page>

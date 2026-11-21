@@ -248,3 +248,9 @@ LinkedIn status is independent from AI-provider status. Scanner and Improve requ
 
 ### 2.0.3. Approved Supporting Screen Wireframes
 Use [`Connections-Content-History-Settings.png`](Connections-Content-History-Settings.png) as the visual reference for Connections, Content Lab, History, and Settings. Keep the established pastel palette, persistent account statuses, compact navigation, clear hierarchy, and generous spacing from Scanner and Improve. Connections shows separate provider cards and the requirement to connect at least one AI provider for model choices. Content Lab presents skill selection, drafting controls, and a visible notice that content is not sent or published automatically. History provides filters, change summaries, scores/status, and confirmed restore. Settings groups appearance, AI defaults, local data/privacy, export, and confirmed deletion. Treat example identities, content, values, and records as illustrative; runtime state and this specification govern actual behavior. Maintain responsive layouts and accessible control labels/statuses.
+
+### Implementation checkpoint — 2026-11-21
+- Content Lab now routes all 11 skill selections through their matching service operation, with per-skill inputs, draft retention while switching tools, and a visible result/status area. Outputs are local drafts; the app does not publish or send them.
+- Content Lab generation remains under implementation review. Verify each workflow against its skill contract, especially fabricated-data safeguards and generated-output quality, before closing Phase 6.
+- LinkedIn native PKCE and official Gemini/OpenAI SDK integrations are implemented; live LinkedIn acceptance still depends on app registration/permissions and real credentials. Provider live validation likewise needs user credentials.
+- UI wireframe fidelity gaps are tracked in GitHub issues #12–#14 and remain backlog work.

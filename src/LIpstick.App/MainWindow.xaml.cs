@@ -4,6 +4,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.Graphics;
 using LIpstick.Core.Models;
 using LIpstick_App.Pages;
 using LIpstick_App.ViewModels;
@@ -23,6 +24,13 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon("Assets/LIpstick-Logo.png");
+        const int initialWidth = 1280;
+        const int initialHeight = 850;
+        AppWindow.Resize(new SizeInt32(initialWidth, initialHeight));
+        var workArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        AppWindow.Move(new PointInt32(
+            workArea.X + Math.Max(0, (workArea.Width - initialWidth) / 2),
+            workArea.Y + Math.Max(0, (workArea.Height - initialHeight) / 2)));
 
         NavFrame.Navigated += NavFrame_Navigated;
         ViewModel.PropertyChanged += (s, e) =>

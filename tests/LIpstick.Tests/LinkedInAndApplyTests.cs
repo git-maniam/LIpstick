@@ -411,7 +411,7 @@ public class LinkedInAndApplyTests
     }
 
     [TestMethod]
-    public async Task LI_01c_OAuth_Callback_Exchanges_Code_For_Token_And_Stores_In_DPAPI()
+    public async Task LI_01c_OAuth_Callback_Exchanges_Code_For_Synthetic_Token_And_Stores_In_DPAPI()
     {
         var mockHandler = new MockHttpMessageHandler
         {
@@ -494,6 +494,33 @@ public class LinkedInAndApplyTests
     }
 
     [TestMethod]
+    public async Task LI_01f_OAuth_Restores_Identity_Only_From_Userinfo_And_Does_Not_Fabricate_Headline()
+    {
+        var handler = new MockHttpMessageHandler
+        {
+            ResponseFactory = request => new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(request.RequestUri!.AbsolutePath.EndsWith("userinfo", StringComparison.Ordinal)
+                    ? "{ \"sub\": \"member-789\", \"name\": \"Riley Example\", \"picture\": \"https://example.test/avatar.png\" }"
+                    : "{ \"access_token\": \"identity-token\", \"expires_in\": 3600 }",
+                    System.Text.Encoding.UTF8,
+                    "application/json")
+            }
+        };
+        var client = new LinkedInOAuthClient(_secureStorage, new HttpClient(handler), clientId: "client-123");
+
+        var connected = await client.ExchangeCodeForTokenAsync(
+            "auth-code", "state-ok", "state-ok", "http://127.0.0.1:12345/callback/", "verifier");
+        var restored = await client.GetSessionInfoAsync();
+
+        Assert.AreEqual("Riley Example", connected.FullName);
+        Assert.AreEqual(LinkedInConnectionState.Connected, restored.State);
+        Assert.AreEqual("Riley Example", restored.FullName);
+        Assert.AreEqual("https://example.test/avatar.png", restored.AvatarUrl);
+        Assert.IsNull(restored.Headline, "OIDC identity scope does not provide a headline.");
+    }
+
+    [TestMethod]
     public async Task LI_05d_Profile_Request_Failure_Is_Reported_Without_Demo_Data()
     {
         await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", "valid_test_token");
@@ -530,6 +557,52 @@ public class LinkedInAndApplyTests
 
         var session = await oauthClient.GetSessionInfoAsync();
         Assert.AreEqual(LinkedInConnectionState.Disconnected, session.State);
+    }
+
+    [TestMethod]
+    public async Task LI_03d_Native_OAuth_Refresh_Rotates_Tokens_And_Extends_Expiry()
+    {
+        await _secureStorage.StoreSecretAsync("LINKEDIN_CLIENT_ID", "client-123");
+        await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", "expired-access");
+        await _secureStorage.StoreSecretAsync("LINKEDIN_REFRESH_TOKEN", "refresh-old");
+        await _secureStorage.StoreSecretAsync("LINKEDIN_TOKEN_EXPIRY", DateTime.UtcNow.AddMinutes(-1).ToString("o"));
+        var handler = new MockHttpMessageHandler
+        {
+            ResponseContent = "{ \"access_token\": \"access-new\", \"refresh_token\": \"refresh-new\", \"expires_in\": 3600 }"
+        };
+        var client = new LinkedInOAuthClient(_secureStorage, new HttpClient(handler));
+
+        bool refreshed = await client.RefreshTokenAsync();
+
+        Assert.IsTrue(refreshed);
+        Assert.AreEqual("access-new", await _secureStorage.GetSecretAsync("LINKEDIN_ACCESS_TOKEN"));
+        Assert.AreEqual("refresh-new", await _secureStorage.GetSecretAsync("LINKEDIN_REFRESH_TOKEN"));
+        Assert.IsTrue(DateTime.Parse(await _secureStorage.GetSecretAsync("LINKEDIN_TOKEN_EXPIRY")!) > DateTime.UtcNow.AddMinutes(50));
+        Assert.Contains("grant_type=refresh_token", handler.LastRequestBody!);
+        Assert.Contains("refresh_token=refresh-old", handler.LastRequestBody!);
+        Assert.DoesNotContain("client_secret", handler.LastRequestBody!);
+    }
+
+    [TestMethod]
+    public async Task LI_03e_Native_OAuth_Refresh_Failure_Clears_Session_But_Cancellation_Preserves_It()
+    {
+        await _secureStorage.StoreSecretAsync("LINKEDIN_CLIENT_ID", "client-123");
+        await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", "expired-access");
+        await _secureStorage.StoreSecretAsync("LINKEDIN_REFRESH_TOKEN", "refresh-old");
+        var handler = new MockHttpMessageHandler { StatusCode = System.Net.HttpStatusCode.Unauthorized };
+        var client = new LinkedInOAuthClient(_secureStorage, new HttpClient(handler));
+
+        Assert.IsFalse(await client.RefreshTokenAsync());
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN"));
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_REFRESH_TOKEN"));
+
+        await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", "expired-access");
+        await _secureStorage.StoreSecretAsync("LINKEDIN_REFRESH_TOKEN", "refresh-old");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => client.RefreshTokenAsync(cancellation.Token));
+        Assert.IsTrue(await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN"));
+        Assert.IsTrue(await _secureStorage.HasSecretAsync("LINKEDIN_REFRESH_TOKEN"));
     }
 
     [TestMethod]

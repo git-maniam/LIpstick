@@ -36,35 +36,36 @@ public class ContentLabService : IContentLabService
             validationNotes.Add("Topic or idea is required.");
         }
 
-        string metric = request.SpecificMetric ?? "10 hours/week";
         if (string.IsNullOrWhiteSpace(request.SpecificMetric))
         {
-            validationNotes.Add("No specific metric provided; used placeholder. Replace with your empirical numbers.");
+            validationNotes.Add("No verified metric or specific outcome was supplied. Keep the draft qualitative or add a result you can substantiate.");
         }
 
+        string topic = request.TopicOrIdea.Trim();
+        string audience = string.IsNullOrWhiteSpace(request.Audience) ? "your audience" : request.Audience.Trim();
         var hookCandidates = new List<string>
         {
-            $"Most teams spend 15 hours a week doing manual ops.\nHere is how we cut that to 2 hours using a simple automation:",
-            $"I spent 3 months testing AI workflows for {request.Audience ?? "B2B teams"}.\nHere are the 3 changes that actually moved the needle by {metric}:",
-            $"Unpopular opinion on {request.TopicOrIdea}:\nThe conventional advice costs you {metric} in lost productivity."
+            $"For {audience}, {topic} is easier to improve when the current steps are visible.",
+            $"A useful starting point for {topic}: identify what happens, who does it, and where work stalls.",
+            $"Before changing {topic}, decide which outcome you can measure and what evidence would support it."
         };
 
         string selectedHook = hookCandidates[0];
+        string measuredResult = string.IsNullOrWhiteSpace(request.SpecificMetric)
+            ? string.Empty
+            : $"\n\nA result from your own measurement: {request.SpecificMetric.Trim()}. Include it only if you can verify the source and timeframe.";
+        string body = $@"A useful discussion of {topic} starts with the process as it actually works. Separate observed behavior from assumptions before choosing a change.
 
-        string body = $@"We didn't start with complex software. We started with a Google Sheet and 3 core rules:
+1. Map the steps people follow today.
+2. Mark handoffs, repeated work, and decisions that need context.
+3. Choose one small change that you can evaluate safely.
+4. Compare the result with a baseline you recorded.
 
-1. Never do manual copy-paste across tabs twice.
-2. If an action repeats daily, script it once.
-3. Measure outcome in hours reclaimed, not features built.
+The audience and constraints matter. An approach that fits one team may not fit another, so describe trade-offs you can support instead of presenting one solution as universal.{measuredResult}
 
-The result after 60 days:
-- Reclaimed {metric} for the core team
-- Eliminated 95% of data entry errors
-- Zero burnout during quarterly close
+What part of {topic} would you examine first?";
 
-What is one manual task your team still does by hand every Monday?";
-
-        string fullPost = $"{selectedHook}\n\n{body}\n\n#productivity #operations #workflow";
+        string fullPost = $"{selectedHook}\n\n{body}\n\n#process #work";
 
         // T6: Gate against link in post body
         if (OutboundLinkRegex.IsMatch(fullPost))
@@ -119,7 +120,7 @@ What is one manual task your team still does by hand every Monday?";
         if (request.IsInviteNote)
         {
             // 200 character hard limit on LinkedIn connection requests
-            draft = $"Hi {request.ProspectName}, enjoyed your recent note on {request.MutualContext}. Building similar tools in this space and would love to connect!";
+            draft = $"Hi {request.ProspectName}, {request.MutualContext}. I would be glad to connect.";
             if (draft.Length > 200)
             {
                 draft = draft[..197] + "...";
@@ -127,7 +128,7 @@ What is one manual task your team still does by hand every Monday?";
         }
         else
         {
-            draft = $"Hi {request.ProspectName},\n\nSaw your role as {request.ProspectRole} at your company. Noticed {request.MutualContext}.\n\nPut together a short 1-page breakdown of how teams in your space solve this. Happy to send it over if relevant?";
+            draft = $"Hi {request.ProspectName},\n\nI wanted to follow up on {request.MutualContext}. If this is relevant to your work as {request.ProspectRole}, what would be useful to discuss?";
         }
 
         var eval = humanizer.Evaluate(draft);
@@ -148,32 +149,46 @@ What is one manual task your team still does by hand every Monday?";
             notes.Add("Slide count exceeds 12. Completion rate drops noticeably beyond 12 slides.");
         }
 
-        var slides = new List<CarouselSlide>();
-        slides.Add(new CarouselSlide(1, "Cover", "5 Steps to Resilience", $"For {request.Audience}"));
-        slides.Add(new CarouselSlide(2, "The Stake", "Why This Matters", "Complex sync creates downtime. Simple patterns keep uptime high."));
-
-        int contentSlidesCount = Math.Max(request.SlideCount - 4, 1);
-        for (int i = 0; i < contentSlidesCount; i++)
+        int slideCount = Math.Clamp(request.SlideCount, 4, 12);
+        string topic = string.IsNullOrWhiteSpace(request.Topic) ? "Your topic" : request.Topic.Trim();
+        string audience = string.IsNullOrWhiteSpace(request.Audience) ? "your audience" : request.Audience.Trim();
+        string takeaway = string.IsNullOrWhiteSpace(request.KeyTakeaway)
+            ? "Add the main takeaway you can support from your source material."
+            : request.KeyTakeaway.Trim();
+        string coverTitle = string.Join(' ', topic.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(6));
+        var slides = new List<CarouselSlide>
         {
-            slides.Add(new CarouselSlide(3 + i, "Content", $"Step {i + 1} Framework", "Deploy stateless workers with automatic circuit breakers and retry policies."));
+            new(1, "Cover", coverTitle, $"A concise guide for {audience}."),
+            new(2, "The Stake", "Why this matters", $"Context to explain: {takeaway}")
+        };
+
+        int recapNumber = slideCount - 1;
+        for (int i = 3; i < recapNumber; i++)
+        {
+            slides.Add(new CarouselSlide(i, "Content", $"{topic} Â· Part {i - 2}", $"Use this slide for one verified detail, step, example, or trade-off about {topic}."));
         }
 
-        slides.Add(new CarouselSlide(request.SlideCount - 1, "Recap", "Summary Checklist", "1. Circuit breakers\n2. Retry limits\n3. Stateless workers"));
-        slides.Add(new CarouselSlide(request.SlideCount, "CTA", "Next Step", "Save this PDF or follow for systems architecture breakdowns."));
-
-        string postText = "Carousels work best when every slide carries one idea.\nHere is the breakdown in PDF format.\n\n#systems #architecture";
+        slides.Add(new CarouselSlide(recapNumber, "Recap", "Key takeaway", takeaway));
+        slides.Add(new CarouselSlide(slideCount, "CTA", "Next step", "Choose one relevant action for the reader to take next."));
+        string postText = $"A short carousel for {audience} about {topic}.\nKey takeaway: {takeaway}";
         return new CarouselDraftResult(slides, postText, notes);
     }
 
     public CommentDraftResult DraftComment(CommentDraftRequest request, IHumanizerEngine humanizer)
     {
+        string perspective = string.IsNullOrWhiteSpace(request.YourPerspective)
+            ? "Add your own perspective before drafting."
+            : request.YourPerspective.Trim().TrimEnd('.', '!', '?');
+        string excerpt = request.PostText.Split(['.', '!', '?', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault()
+            ?? "the post";
+        if (excerpt.Length > 100) excerpt = excerpt[..97] + "...";
         var options = new List<CommentOption>
         {
-            new("Add a datum", $"In our 2024 deployment audit across 40 teams, monoliths had 3x higher sprint completion for teams under 50. Microservices added 18 hours weekly of network debugging.", 2),
-            new("Respectful disagree", $"While microservices decouple deployments, they transfer that complexity to distributed transactions. For early-stage teams, modular monoliths save tens of thousands in infrastructure spend.", 2)
+            new("Add perspective", $"{perspective}. What conditions would change the trade-off?", 2),
+            new("Ask a follow-up", $"The post says: â€œ{excerpt}â€. How do you see that alongside this perspective: {perspective}?", 2)
         };
 
-        return new CommentDraftResult(options, "Option 1 provides verifiable empirical data directly addressing the post.");
+        return new CommentDraftResult(options, "Choose the option that best reflects your view and edit it to sound like you.");
     }
 
     public ReplyTriageResult TriageAndDraftReplies(ReplyTriageRequest request, IHumanizerEngine humanizer)
@@ -192,17 +207,17 @@ What is one manual task your team still does by hand every Monday?";
             if (c.Text.Contains("hire", StringComparison.OrdinalIgnoreCase) || c.AuthorRole.Contains("CEO", StringComparison.OrdinalIgnoreCase))
             {
                 bucket = "LEAD";
-                replyText = $"Happy to send our deployment architecture guide over to you, {c.AuthorName}. Will drop you a note.";
+                replyText = $"Thanks for sharing this, {c.AuthorName}. Happy to discuss what outcome you are looking to achieve.";
             }
             else if (c.Text.Contains("disagree", StringComparison.OrdinalIgnoreCase) || c.Text.Length > 60)
             {
                 bucket = "SUBSTANCE";
-                replyText = $"Appreciate the perspective on review cycles, {c.AuthorName}. How did you adjust PR sizes?";
+                replyText = $"Thanks for the detailed perspective, {c.AuthorName}. Which part has mattered most in practice?";
             }
             else if (c.AuthorRole.Contains("VP", StringComparison.OrdinalIgnoreCase) || c.AuthorRole.Contains("Head", StringComparison.OrdinalIgnoreCase))
             {
                 bucket = "PEER";
-                replyText = $"Thanks {c.AuthorName}, glad the routine resonates with your ops setup.";
+                replyText = $"Thanks for adding this, {c.AuthorName}. What are you seeing from your side?";
             }
             else if (c.Text.Contains("crypto", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("bit.ly", StringComparison.OrdinalIgnoreCase))
             {
@@ -212,7 +227,7 @@ What is one manual task your team still does by hand every Monday?";
             else
             {
                 bucket = "SUPPORT";
-                replyText = $"Thanks {c.AuthorName}!";
+                replyText = $"Thanks for sharing this, {c.AuthorName}.";
             }
 
             counts[bucket]++;
@@ -233,7 +248,7 @@ What is one manual task your team still does by hand every Monday?";
             }
             else if (m.MessageText.Contains("consult", StringComparison.OrdinalIgnoreCase) || m.MessageText.Contains("case study", StringComparison.OrdinalIgnoreCase))
             {
-                list.Add(new TriagedInboxItem(m.MessageId, "LEAD", null, $"Hi {m.SenderName}, yes we specialize in Postgres reconciliation. Let me know what data volume you are working with."));
+                list.Add(new TriagedInboxItem(m.MessageId, "LEAD", null, $"Hi {m.SenderName}, thanks for reaching out. What outcome are you working toward?"));
             }
             else
             {
@@ -260,22 +275,24 @@ What is one manual task your team still does by hand every Monday?";
     {
         bool hasNumbers = Regex.IsMatch(request.SourceContent, @"\$\d|\d+%");
         bool hasMistakes = request.SourceContent.Contains("mistake", StringComparison.OrdinalIgnoreCase);
-        bool isThin = request.SourceContent.Length < 100 || (!hasNumbers && !hasMistakes);
+        var excerpts = Regex.Split(request.SourceContent.Trim(), @"(?<=[.!?])\s+|\r?\n")
+            .Select(text => text.Trim())
+            .Where(text => text.Length >= 24)
+            .Distinct(StringComparer.Ordinal)
+            .Take(4)
+            .ToList();
+        bool isThin = request.SourceContent.Length < 100 || (!hasNumbers && !hasMistakes) || excerpts.Count < 4;
 
         var counts = new Dictionary<string, int>
         {
-            { "Claims", isThin ? 1 : 3 },
+            { "Claims", excerpts.Count },
             { "Numbers", hasNumbers ? 2 : 0 },
             { "Mistakes", hasMistakes ? 2 : 0 }
         };
 
-        var posts = isThin ? new List<string>() : new List<string>
-        {
-            "Post 1: The $42k billing mistake",
-            "Post 2: Why idempotency keys save database locks",
-            "Post 3: The Friday 4pm outage breakdown",
-            "Post 4: Framework for transactional integrity"
-        };
+        var posts = isThin
+            ? new List<string>()
+            : excerpts.Select((excerpt, index) => $"Post {index + 1} Â· {request.SourceTitle.Trim()}\n{excerpt}").ToList();
 
         return new RepurposeResult(isThin, counts, posts);
     }
@@ -303,8 +320,8 @@ What is one manual task your team still does by hand every Monday?";
         var eval = rubricEvaluator.EvaluateProfile(profile);
         var rewrites = new Dictionary<string, string>
         {
-            { "Headline", "Building AI agents saving teams 10h/wk | $4.2M pipeline | Ops @ Acme" },
-            { "About", "Most operations teams lose 15 hours a week wrestling fragmented data.\nI design automated workflows that eliminate that friction completely.\n\nOver the past 5 years:\n- Automated 60+ workflows saving $1.8M annually\n- Scaled pipelines to 10M daily events with 99.99% reliability\n\nSend a DM or email to discuss systems architecture." }
+            { "Headline", $"{request.Headline.Trim()} | [verified outcome you can support] | [audience or specialty]" },
+            { "About", "Start with the audience or problem you work on.\n\nDescribe your approach using examples you can verify.\n\nAdd one to three results with their scope and timeframe only when you can substantiate them.\n\nClose with a next step that fits your goals." }
         };
 
         return new ProfileAuditResult(eval.TotalScore, eval.FixFirstCategories.Select(c => c.CategoryName).ToList(), rewrites);

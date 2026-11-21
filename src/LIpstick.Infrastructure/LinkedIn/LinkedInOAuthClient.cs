@@ -107,8 +107,11 @@ public class LinkedInOAuthClient : ILinkedInClient
             string accessToken = root.GetProperty("access_token").GetString() ?? throw new InvalidOperationException("Missing access_token in LinkedIn response.");
             int expiresIn = root.TryGetProperty("expires_in", out var expProp) ? expProp.GetInt32() : 5184000;
             string? memberId = root.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+            string? refreshToken = root.TryGetProperty("refresh_token", out var refreshProp) ? refreshProp.GetString() : null;
 
             await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", accessToken);
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+                await _secureStorage.StoreSecretAsync("LINKEDIN_REFRESH_TOKEN", refreshToken);
             if (!string.IsNullOrWhiteSpace(memberId))
                 await _secureStorage.StoreSecretAsync("LINKEDIN_MEMBER_ID", memberId);
             await _secureStorage.StoreSecretAsync("LINKEDIN_TOKEN_EXPIRY", DateTime.UtcNow.AddSeconds(expiresIn).ToString("o"));
@@ -317,10 +320,61 @@ public class LinkedInOAuthClient : ILinkedInClient
     public async Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
         _clientId = await _secureStorage.GetSecretAsync("LINKEDIN_CLIENT_ID") ?? _clientId;
-        await DisconnectAsync(cancellationToken);
-        return false;
+        string? refreshToken = await _secureStorage.GetSecretAsync("LINKEDIN_REFRESH_TOKEN");
+        if (string.IsNullOrWhiteSpace(refreshToken) || string.IsNullOrWhiteSpace(_clientId))
+        {
+            await DisconnectAsync(cancellationToken);
+            return false;
+        }
+
+        string tokenEndpoint = CustomBaseUrl != null
+            ? $"{CustomBaseUrl.TrimEnd('/')}/oauth/v2/accessToken"
+            : "https://www.linkedin.com/oauth/v2/accessToken";
+        using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "refresh_token",
+                ["refresh_token"] = refreshToken,
+                ["client_id"] = _clientId
+            })
+        };
+
+        try
+        {
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                await DisconnectAsync(cancellationToken);
+                return false;
+            }
+
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("access_token", out var accessTokenProperty) ||
+                string.IsNullOrWhiteSpace(accessTokenProperty.GetString()))
+            {
+                await DisconnectAsync(cancellationToken);
+                return false;
+            }
+
+            await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", accessTokenProperty.GetString()!);
+            if (root.TryGetProperty("refresh_token", out var rotatedToken) &&
+                !string.IsNullOrWhiteSpace(rotatedToken.GetString()))
+                await _secureStorage.StoreSecretAsync("LINKEDIN_REFRESH_TOKEN", rotatedToken.GetString()!);
+            int expiresIn = root.TryGetProperty("expires_in", out var expiresProperty) && expiresProperty.TryGetInt32(out int seconds)
+                ? seconds
+                : 5184000;
+            await _secureStorage.StoreSecretAsync("LINKEDIN_TOKEN_EXPIRY", DateTime.UtcNow.AddSeconds(expiresIn).ToString("o"));
+            return true;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch
+        {
+            await DisconnectAsync(cancellationToken);
+            return false;
+        }
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)

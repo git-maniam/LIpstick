@@ -95,15 +95,20 @@ public class OpenAIProvider : IAIProvider
         }
         catch (ClientResultException ex)
         {
+            string message = ex.Message.ToLowerInvariant();
             string code = ex.Status switch
             {
                 401 => AIErrorCodes.InvalidKey,
                 403 => AIErrorCodes.QuotaExceeded,
-                429 => AIErrorCodes.RateLimitExceeded,
+                429 => message.Contains("quota") ? AIErrorCodes.QuotaExceeded : AIErrorCodes.RateLimitExceeded,
                 >= 200 and < 300 => AIErrorCodes.MalformedResponse,
-                _ => AIErrorCodes.NetworkError
+                _ => message.Contains("quota") ? AIErrorCodes.QuotaExceeded : AIErrorCodes.NetworkError
             };
             throw new AIProviderException(ProviderName, "OpenAI request failed. Check credentials, quota, and endpoint settings.", code, ex);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            throw new AIProviderException(ProviderName, "OpenAI returned a malformed generation response.", AIErrorCodes.MalformedResponse, ex);
         }
         catch (Exception ex) when (ex is not AIProviderException)
         {

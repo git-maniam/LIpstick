@@ -89,36 +89,40 @@ public partial class ImproveViewModel : ObservableObject
 
     private async Task LoadSectionAsync(string section)
     {
+        var session = await _linkedInClient.GetSessionInfoAsync();
+        if (session.State != LinkedInConnectionState.Connected)
+        {
+            AsIsText = string.Empty;
+            ToBeText = string.Empty;
+            StatusMessage = "Connect LinkedIn to load your profile. You can draft after connecting an AI provider.";
+            UpdateScoreAndDiff();
+            return;
+        }
+
         var profile = await _linkedInClient.IngestProfileAsync();
+        StatusMessage = string.Empty;
 
         switch (section.ToLowerInvariant())
         {
             case "headline":
                 AsIsText = profile.Headline;
-                ToBeText = "Building AI agents that save B2B teams 10h/wk | $4.2M pipeline generated | Ops @ Acme";
+                ToBeText = string.Empty;
                 break;
             case "about":
                 AsIsText = profile.About;
-                ToBeText = @"Most ops leaders lose 12 hours every week wrestling fragmented tools.
-I build deterministic automations that cut that manual grind to zero.
-
-Over the last 4 years at Acme and Beta Corp:
-- Automated 45 core business workflows across 6 departments
-- Reclaimed 14,000 engineering hours
-- Scaled data pipelines from 10k to 2.5M daily events with 99.98% uptime
-
-If you want to streamline your team's workflow, send a DM or email me at alex@example.com.";
+                ToBeText = string.Empty;
                 break;
             case "experience":
-                AsIsText = profile.Experiences.Count > 0 ? profile.Experiences[0].Description : "";
-                ToBeText = @"Led cross-functional team of 8 engineers delivering enterprise data sync:
-- Reduced sync latency from 45 minutes to 3.2 seconds across 12M records
-- Cut AWS infrastructure costs by $180,000 annually through query optimization
-- Onboarded 14 enterprise pilot customers with zero SLA breaches";
+                AsIsText = profile.Experiences.Count > 0 ? $"{profile.Experiences[0].Title} — {profile.Experiences[0].Company}\n{profile.Experiences[0].Description}" : string.Empty;
+                ToBeText = string.Empty;
+                break;
+            case "featured":
+                AsIsText = string.Join("\n\n", profile.FeaturedItems.Select(item => $"{item.Title}\n{item.Description}"));
+                ToBeText = string.Empty;
                 break;
             default:
-                AsIsText = profile.Headline;
-                ToBeText = "Building AI solutions with verifiable outcomes.";
+                AsIsText = string.Empty;
+                ToBeText = string.Empty;
                 break;
         }
 
@@ -154,6 +158,7 @@ If you want to streamline your team's workflow, send a DM or email me at alex@ex
         {
             "headline" => await _syncWorker.UpdateHeadlineAsync(ToBeText),
             "about" => await _syncWorker.UpdateAboutAsync(ToBeText),
+            "featured" => new UpdateResult(SelectedSection, UpdateOutcome.Unsupported, "Featured section updates are not supported by the current LinkedIn permissions.", DateTime.UtcNow, false),
             _ => await _syncWorker.UpdateHeadlineAsync(ToBeText)
         };
 

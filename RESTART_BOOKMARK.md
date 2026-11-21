@@ -90,4 +90,31 @@ Persistent app configuration and rollback artifacts are located under `%LocalApp
 - Replaced app mock LinkedIn registration with `LinkedInOAuthClient`; added system-browser authorization, loopback callback/state validation, DPAPI-backed Client ID storage, OIDC userinfo identity storage, and explicit profile-fetch failures instead of demo fallback.
 - Aligned README, SPEC, and architecture decision record with native system-browser OAuth using PKCE (S256); no embedded client secret. LinkedIn must enable native PKCE for the app.
 - Build succeeded (0 errors); test suite passed 125/125 after PKCE and AI adapter contract updates, including checks that missing credentials do not fabricate sessions and failed profile requests do not return demo data. No real LinkedIn OAuth was possible without developer app credentials.
-- **Next:** PKCE URL/form and dynamic loopback callback tests are complete. AI adapters now return usage/latency metadata and map invalid keys/malformed responses to typed errors. Next, migrate both raw REST adapters to their specified official .NET SDKs while preserving custom endpoints, cancellation, and test fakes; then rerun the Phase 2 gate and record evidence. Live LinkedIn auth still requires LinkedIn to enable native PKCE. Issues #2/#3 remain in progress.
+- **Next:** Complete the Phase 2 gate in `TEST-PLAN.md`: verify live model availability and key-validation UX, complete LinkedIn LI-01–LI-06 behavior, and record the Phase 2 acceptance evidence. Provider routing, SDK cancellation, typed errors, usage/latency, and custom endpoints are now covered. Real LinkedIn sign-in still requires LinkedIn to enable native PKCE for the developer app. Issues #2/#3 remain in progress.
+
+
+### SDK integration update
+- Migrated Gemini and OpenAI adapters to the official .NET SDKs (Google.GenAI 2.2.0 and OpenAI 2.15.0). Preserved injectable HTTP transports, custom base URLs, cancellation, typed failures, usage counts, and latency metadata; OpenAI SDK telemetry is disabled.
+- Added tests for SDK cancellation and both custom endpoint routes. Latest verification: build succeeded (0 warnings, 0 errors); tests passed 127/127.
+
+### Continuation update (2026-11-21)
+- Implemented native LinkedIn refresh-token exchange in `LinkedInOAuthClient`: rotated access/refresh tokens and expiry are saved to DPAPI storage; failed refresh clears the stale session; cancellation leaves credentials intact. Added coverage for refresh success, failure cleanup, and cancellation.
+- AI provider credential Save & Connect now sends a small fixed validation request. It reports verified status only after a successful provider response and restores the previous key on failure; keys remain in secure storage and validation requests include no profile data.
+- Removed the fabricated LinkedIn starter identity/headline from Connections. The connected state now shows OIDC userinfo name/avatar and transparently reports when headline is unavailable with current permissions.
+- Latest verification: build succeeded (224 warnings, 0 errors); tests passed 130/130. Includes native OAuth token refresh success/failure/cancellation, userinfo identity persistence, AI credential validation compilation, provider routing/cancellation/custom endpoints.
+- **Next:** Address remaining LI-01–LI-06 acceptance gaps: real profile-ingest limits, safe secret/log evidence, and live native PKCE/refresh behavior depend on LinkedIn app permissions and credentials. Record only externally verifiable acceptance results; no live credentials are present.
+
+### UI wireframe alignment update (2026-11-21)
+- Fixed the app startup crash: DI could not choose between the two `AIHubService` constructors. `IAIHubService` is now explicitly constructed from registered `IAIProvider` instances.
+- Compared the running app with `Connections-Content-History-Settings.png`, `Scanner.png`, and `Improve.png`. Set a centered 1280x850 initial window; moved persistent account states to the top of navigation; aligned Connections, Scanner, Improve, Content Lab, History, and Settings to the pale blue canvas, navy hierarchy, rounded white cards, section tabs, score rows, and filter/table patterns from the references.
+- Removed fabricated default profile/post content from Scanner, Improve, and Content Lab. Disconnected Scanner/Improve now show connection guidance. Content Lab tabs use compact wireframe labels. History section/date/status filters are functional.
+- Fixed startup DI ambiguity between `AIHubService` constructors. UIA navigation smoke review reached Scanner, Improve, Content Lab, History, and Settings without a crash; captured UI previews directly from LIpstick's window (not the overlapping Amazon/browser window).
+- Latest solution build succeeded (229 warnings, 0 errors); `git diff --check` passed (line-ending notices only). Tests were not rerun for this visual pass.
+- **Next:** Keep the app open for visual review. Continue keyboard/accessibility and responsive-size refinement if needed; current Content Lab only generates the post workflow even though its skill selector displays all 11 tools. External LinkedIn/AI credentials are still required for connected states and generated provider content.
+
+### Finalized handoff — 2026-11-21
+- Content Lab now dispatches all 11 skills and renders per-skill input/output surfaces. The deterministic service workflows are still under review for skill-contract fidelity and fabricated-data safeguards; Phase 6 remains In progress (#8).
+- GitHub Project LIpstick: #2 LinkedIn OAuth, #3 provider adapters, and #8 Content Lab are In progress. UI fidelity bugs #12–#14 are Backlog.
+- Visual worktree changes are ready for user review; the app was not relaunched after the last modifications.
+- External acceptance still requires LinkedIn native-PKCE app enablement/credentials and live provider credentials. Wireframe visual comparison remains next via #12–#14.
+- Next after restart: inspect this branch/worktree and commit history; resume Phase 6 contract/factuality review, then capture the remaining Phase 2 live-credential evidence. Do not mark these milestones complete without evidence.

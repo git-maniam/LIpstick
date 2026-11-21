@@ -91,14 +91,19 @@ public class GeminiProvider : IAIProvider
         {
             string message = ex.Message.ToLowerInvariant();
             string code = message.Contains("429") || message.Contains("rate") ? AIErrorCodes.RateLimitExceeded
-                : message.Contains("quota") || message.Contains("resource_exhausted") ? AIErrorCodes.QuotaExceeded
+                : message.Contains("quota") || message.Contains("resource_exhausted") || message.Contains("403") ? AIErrorCodes.QuotaExceeded
                 : message.Contains("401") || message.Contains("unauthorized") || message.Contains("api key") || message.Contains("invalid key") ? AIErrorCodes.InvalidKey
                 : AIErrorCodes.NetworkError;
             throw new AIProviderException(ProviderName, "Gemini request failed. Check credentials, quota, and endpoint settings.", code, ex);
         }
         catch (ApiException ex)
         {
-            throw new AIProviderException(ProviderName, "Gemini service request failed.", AIErrorCodes.NetworkError, ex);
+            string message = ex.Message.ToLowerInvariant();
+            string code = message.Contains("429") || message.Contains("rate") ? AIErrorCodes.RateLimitExceeded
+                : message.Contains("quota") || message.Contains("resource_exhausted") || message.Contains("403") ? AIErrorCodes.QuotaExceeded
+                : message.Contains("401") || message.Contains("unauthorized") || message.Contains("api key") || message.Contains("invalid key") ? AIErrorCodes.InvalidKey
+                : AIErrorCodes.NetworkError;
+            throw new AIProviderException(ProviderName, "Gemini service request failed.", code, ex);
         }
         catch (HttpRequestException ex)
         {
