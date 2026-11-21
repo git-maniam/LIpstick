@@ -68,10 +68,13 @@ public class AIHubService : IAIHubService
         return _providers.FirstOrDefault() ?? throw new InvalidOperationException("No AI providers configured in AIHubService.");
     }
 
-    public async Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default) =>
+        (await GenerateCompletionAsync(request, cancellationToken)).Text;
+
+    public async Task<AICompletionResult> GenerateCompletionAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var provider = ResolveProviderForModel(request.ModelName);
-        return await provider.GenerateRecommendationAsync(request, cancellationToken);
+        return await provider.GenerateCompletionAsync(request, cancellationToken);
     }
 }

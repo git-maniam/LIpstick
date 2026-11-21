@@ -1,5 +1,6 @@
-using System.Text;
 using System.Text.Json;
+using Google.GenAI;
+using Google.GenAI.Types;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
 using LIpstick.Core.Services;
@@ -39,8 +40,12 @@ public class GeminiProvider : IAIProvider
         };
     }
 
-    public async Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default) =>
+        (await GenerateCompletionAsync(request, cancellationToken)).Text;
+
+    public async Task<AICompletionResult> GenerateCompletionAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
     {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
         var apiKey = await _secureStorage.GetSecretAsync("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -52,83 +57,27 @@ public class GeminiProvider : IAIProvider
             ? CustomBaseUrl
             : (request.RubricCriteria?.TryGetValue("CustomBaseUrl", out var customUrl) == true ? customUrl.ToString()! : "https://generativelanguage.googleapis.com");
 
-        string endpoint = $"{baseUrl.TrimEnd('/')}/v1beta/models/{model}:generateContent";
-
         var prompt = PromptContextAssembler.AssemblePrompt(request);
-        var requestPayload = new
-        {
-            contents = new[]
-            {
-                new
-                {
-                    parts = new[] { new { text = prompt } }
-                }
-            },
-            generationConfig = new
-            {
-                temperature = 0.4,
-                maxOutputTokens = 800
-            }
-        };
-
-        var json = JsonSerializer.Serialize(requestPayload);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
-        httpRequest.Headers.Add("x-goog-api-key", apiKey);
-        httpRequest.Content = content;
 
         try
         {
-            using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
-            var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
+            var client = new Client(
+                apiKey: apiKey,
+                httpOptions: new HttpOptions { BaseUrl = baseUrl.TrimEnd('/') },
+                clientOptions: new ClientOptions { HttpClientFactory = () => _httpClient });
+            var response = await client.Models.GenerateContentAsync(
+                model,
+                prompt,
+                new GenerateContentConfig { Temperature = 0.4f, MaxOutputTokens = 800 },
+                cancellationToken);
+            timer.Stop();
+            string text = response.Text ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(text))
+                throw new AIProviderException(ProviderName, "Gemini returned no generated text.", AIErrorCodes.MalformedResponse);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                string errorCode = response.StatusCode switch
-                {
-                    System.Net.HttpStatusCode.TooManyRequests => AIErrorCodes.RateLimitExceeded,
-                    System.Net.HttpStatusCode.Forbidden => AIErrorCodes.QuotaExceeded,
-                    System.Net.HttpStatusCode.Unauthorized => AIErrorCodes.Unauthorized,
-                    _ => response.StatusCode.ToString()
-                };
-
-                string errorMessage = $"API returned status {response.StatusCode}";
-                try
-                {
-                    using var errDoc = JsonDocument.Parse(responseString);
-                    if (errDoc.RootElement.TryGetProperty("error", out var errElement))
-                    {
-                        if (errElement.TryGetProperty("message", out var msgElement))
-                        {
-                            errorMessage = msgElement.GetString() ?? errorMessage;
-                        }
-                        if (errElement.TryGetProperty("status", out var statusElement) &&
-                            string.Equals(statusElement.GetString(), "RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase))
-                        {
-                            errorCode = AIErrorCodes.QuotaExceeded;
-                        }
-                    }
-                }
-                catch { }
-
-                errorMessage = errorMessage.Replace(apiKey, "[REDACTED]");
-                throw new AIProviderException(ProviderName, errorMessage, errorCode);
-            }
-
-            using var doc = JsonDocument.Parse(responseString);
-            var root = doc.RootElement;
-            var candidates = root.GetProperty("candidates");
-            if (candidates.GetArrayLength() > 0)
-            {
-                var candidate = candidates[0];
-                var parts = candidate.GetProperty("content").GetProperty("parts");
-                if (parts.GetArrayLength() > 0)
-                {
-                    return parts[0].GetProperty("text").GetString() ?? string.Empty;
-                }
-            }
-
-            return string.Empty;
+            int? promptTokens = response.UsageMetadata?.PromptTokenCount;
+            int? responseTokens = response.UsageMetadata?.CandidatesTokenCount;
+            return new AICompletionResult(text, model, promptTokens, responseTokens, (int)timer.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -137,6 +86,19 @@ public class GeminiProvider : IAIProvider
         catch (Exception ex) when (ex is TimeoutException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             throw new AIProviderException(ProviderName, "Gemini request timed out.", AIErrorCodes.Timeout, ex);
+        }
+        catch (ClientError ex)
+        {
+            string message = ex.Message.ToLowerInvariant();
+            string code = message.Contains("429") || message.Contains("rate") ? AIErrorCodes.RateLimitExceeded
+                : message.Contains("quota") || message.Contains("resource_exhausted") ? AIErrorCodes.QuotaExceeded
+                : message.Contains("401") || message.Contains("unauthorized") || message.Contains("api key") || message.Contains("invalid key") ? AIErrorCodes.InvalidKey
+                : AIErrorCodes.NetworkError;
+            throw new AIProviderException(ProviderName, "Gemini request failed. Check credentials, quota, and endpoint settings.", code, ex);
+        }
+        catch (ApiException ex)
+        {
+            throw new AIProviderException(ProviderName, "Gemini service request failed.", AIErrorCodes.NetworkError, ex);
         }
         catch (HttpRequestException ex)
         {
@@ -147,4 +109,5 @@ public class GeminiProvider : IAIProvider
             throw new AIProviderException(ProviderName, "Network or protocol error calling Gemini API.", AIErrorCodes.NetworkError, ex);
         }
     }
+
 }

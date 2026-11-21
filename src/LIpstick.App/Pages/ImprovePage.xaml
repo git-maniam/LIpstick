@@ -149,9 +149,17 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Foreground="#0A66C2" />
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontWeight="SemiBold" FontSize="13" Foreground="#0A66C2" />
+                <TextBlock Text="{x:Bind ViewModel.GenerationMetadata, Mode=OneWay}" FontSize="11" Opacity="0.7" />
+            </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <Button Content="Re-Generate with AI" Command="{x:Bind ViewModel.ReGenerateCommand}">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="R" Modifiers="Control" />
+                    </Button.KeyboardAccelerators>
+                </Button>
                 <Button Content="Clean &amp; De-Slop" Command="{x:Bind ViewModel.CleanAndHumanizeCommand}">
                     <Button.KeyboardAccelerators>
                         <KeyboardAccelerator Key="C" Modifiers="Control" />

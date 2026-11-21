@@ -91,8 +91,8 @@ The sidebar includes the persistent LinkedIn, OpenAI, and Gemini login/status co
 
 ### 3.1. LinkedIn Account Connection
 - **Authentication Flow:**
-  - Embedded Microsoft WebView2 control for interactive OAuth 2.0 handshake (`r_liteprofile`, `r_basicprofile`, `w_member_social`).
-  - Secure persistent credential storage using the **Windows Credential Locker (`Windows.Security.Credentials.PasswordVault`) / DPAPI** to encrypt refresh tokens and session cookies.
+  - Native OAuth 2.0 authorization-code flow through the system browser with PKCE (S256) and a loopback callback. LinkedIn must enable native PKCE for the registered application.
+  - Secure persistent credential storage using DPAPI for access tokens and OAuth client identifier. Do not store browser cookies or embed a shared client secret.
   - Connection indicator badge in the title bar showing avatar, full name, profile headline, and connection health status (`Connected`, `Token Expiring`, `Disconnected`).
 - **Profile Data Ingestion:**
   - Fetches: Headline, About summary, Experience entries (titles, companies, dates, descriptions), Featured assets, and Skills.

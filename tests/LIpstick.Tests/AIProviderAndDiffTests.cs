@@ -1,8 +1,10 @@
+using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
 using LIpstick.Core.Services;
 using LIpstick.Infrastructure.AI;
 using LIpstick.Infrastructure.LinkedIn;
 using LIpstick.Infrastructure.Storage;
+using LIpstick.Tests.Fakes;
 
 namespace LIpstick.Tests;
 
@@ -355,6 +357,80 @@ What's your take on automated ops?";
             });
 
             Assert.AreEqual("NO_API_KEY", ex.ErrorCode);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [TestMethod]
+    public async Task AI_03d_Live_Adapters_Classify_Invalid_Keys_And_Malformed_Responses()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ai_live_errors_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var storage = new DpapiSecureStorageService(Path.Combine(tempDir, "vault.dat"));
+            await storage.StoreSecretAsync("GEMINI_API_KEY", "gemini-secret");
+            await storage.StoreSecretAsync("OPENAI_API_KEY", "openai-secret");
+            var requestGemini = new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gemini-2.0-flash");
+            var requestOpenAi = requestGemini with { ModelName = "gpt-4o" };
+
+            foreach (var providerCase in new (string Name, Func<HttpClient, IAIProvider> Create, RecommendationRequest Request)[]
+            {
+                ("Gemini", http => new GeminiProvider(storage, http), requestGemini),
+                ("OpenAI", http => new OpenAIProvider(storage, http), requestOpenAi)
+            })
+            {
+                var badKeyHandler = new MockHttpMessageHandler
+                {
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized,
+                    ResponseContent = "{ \"error\": { \"message\": \"invalid key\" } }"
+                };
+                var invalidKey = await Assert.ThrowsExactlyAsync<AIProviderException>(() =>
+                    providerCase.Create(new HttpClient(badKeyHandler)).GenerateRecommendationAsync(providerCase.Request));
+                Assert.AreEqual(AIErrorCodes.InvalidKey, invalidKey.ErrorCode, $"{providerCase.Name}: {invalidKey.InnerException}");
+
+                var malformedHandler = new MockHttpMessageHandler { ResponseContent = "{}" };
+                var malformed = await Assert.ThrowsExactlyAsync<AIProviderException>(() =>
+                    providerCase.Create(new HttpClient(malformedHandler)).GenerateRecommendationAsync(providerCase.Request));
+                Assert.AreEqual(AIErrorCodes.MalformedResponse, malformed.ErrorCode, $"{providerCase.Name}: {malformed.InnerException}");
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [TestMethod]
+    public async Task AI_01d_Live_Adapters_Return_Usage_And_Latency_Metadata()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ai_usage_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var storage = new DpapiSecureStorageService(Path.Combine(tempDir, "vault.dat"));
+            await storage.StoreSecretAsync("GEMINI_API_KEY", "gemini-secret");
+            await storage.StoreSecretAsync("OPENAI_API_KEY", "openai-secret");
+
+            var geminiResponse = """{"candidates":[{"content":{"parts":[{"text":"Gemini draft"}]}}],"usageMetadata":{"promptTokenCount":21,"candidatesTokenCount":7}}""";
+            var gemini = new GeminiProvider(storage, new HttpClient(new MockHttpMessageHandler { ResponseContent = geminiResponse }));
+            var geminiResult = await gemini.GenerateCompletionAsync(new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gemini-2.0-flash"));
+            Assert.AreEqual("Gemini draft", geminiResult.Text);
+            Assert.AreEqual(21, geminiResult.PromptTokenCount);
+            Assert.AreEqual(7, geminiResult.ResponseTokenCount);
+            Assert.AreEqual("gemini-2.0-flash", geminiResult.ModelId);
+
+            var openAiResponse = """{"choices":[{"message":{"content":"OpenAI draft"}}],"usage":{"prompt_tokens":34,"completion_tokens":9}}""";
+            var openAi = new OpenAIProvider(storage, new HttpClient(new MockHttpMessageHandler { ResponseContent = openAiResponse }));
+            var openAiResult = await openAi.GenerateCompletionAsync(new RecommendationRequest("Headline", "Current", "Voice", new Dictionary<string, object>(), "gpt-4o"));
+            Assert.AreEqual("OpenAI draft", openAiResult.Text);
+            Assert.AreEqual(34, openAiResult.PromptTokenCount);
+            Assert.AreEqual(9, openAiResult.ResponseTokenCount);
+            Assert.AreEqual("gpt-4o", openAiResult.ModelId);
+            Assert.IsTrue(geminiResult.LatencyMilliseconds >= 0 && openAiResult.LatencyMilliseconds >= 0);
         }
         finally
         {

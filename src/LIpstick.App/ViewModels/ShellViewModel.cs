@@ -4,6 +4,7 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml.Media;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
+using LIpstick.Infrastructure.AI;
 
 namespace LIpstick_App.ViewModels;
 
@@ -13,6 +14,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly ISecureStorageService _secureStorage;
     private readonly ILocalDataService _dataService;
     private readonly IAIHubService? _aiHub;
+    private readonly GeminiProvider? _geminiProvider;
+    private readonly OpenAIProvider? _openAIProvider;
 
     private static readonly SolidColorBrush ConnectedBrush = new(ColorHelper.FromArgb(255, 16, 185, 129));
     private static readonly SolidColorBrush DisconnectedBrush = new(ColorHelper.FromArgb(255, 239, 68, 68));
@@ -58,12 +61,16 @@ public partial class ShellViewModel : ObservableObject
         ILinkedInClient linkedInClient,
         ISecureStorageService secureStorage,
         ILocalDataService dataService,
-        IAIHubService? aiHub = null)
+        IAIHubService? aiHub = null,
+        GeminiProvider? geminiProvider = null,
+        OpenAIProvider? openAIProvider = null)
     {
         _linkedInClient = linkedInClient;
         _secureStorage = secureStorage;
         _dataService = dataService;
         _aiHub = aiHub;
+        _geminiProvider = geminiProvider;
+        _openAIProvider = openAIProvider;
     }
 
     public async Task InitializeAsync()
@@ -86,6 +93,8 @@ public partial class ShellViewModel : ObservableObject
         // 4. Load config theme & model
         var config = await _dataService.LoadConfigAsync();
         CurrentTheme = config.Theme;
+        if (_geminiProvider != null) _geminiProvider.CustomBaseUrl = config.GeminiCustomBaseUrl;
+        if (_openAIProvider != null) _openAIProvider.CustomBaseUrl = config.OpenAiCustomBaseUrl;
         if (!string.IsNullOrEmpty(config.SelectedModel))
         {
             var match = AvailableModels.FirstOrDefault(m => m.Id == config.SelectedModel || m.DisplayName == config.SelectedModel);

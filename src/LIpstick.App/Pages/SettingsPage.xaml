@@ -30,6 +30,19 @@
                 </StackPanel>
             </Border>
 
+            <!-- AI Model & Custom Endpoints Card (SPEC 3.2 & Issue #3) -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="AI Model &amp; Custom Endpoints" FontWeight="SemiBold" FontSize="16" />
+                    <TextBlock Text="Configure active model and routing to custom proxies, gateways, or enterprise endpoints." Opacity="0.7" FontSize="13" />
+
+                    <TextBox Header="Google Gemini Base URL" PlaceholderText="https://generativelanguage.googleapis.com" Text="{x:Bind ViewModel.GeminiCustomBaseUrl, Mode=TwoWay}" />
+                    <TextBox Header="OpenAI Base URL" PlaceholderText="https://api.openai.com/v1" Text="{x:Bind ViewModel.OpenAiCustomBaseUrl, Mode=TwoWay}" />
+
+                    <Button Content="Save AI Endpoints" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.SaveEndpointsCommand}" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+
             <!-- Local Data & Privacy Card -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
                 <StackPanel Spacing="12">

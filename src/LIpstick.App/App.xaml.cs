@@ -17,6 +17,7 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        AppContext.SetSwitch("OpenAI.DisableTelemetry", true);
         Services = ConfigureServices();
     }
 
@@ -32,7 +33,8 @@ public partial class App : Application
         // Infrastructure
         services.AddSingleton<ISecureStorageService, DpapiSecureStorageService>();
         services.AddSingleton<ILocalDataService, LocalDataService>();
-        services.AddSingleton<ILinkedInClient>(sp => new MockLinkedInClient(sp.GetRequiredService<ISecureStorageService>()));
+        services.AddSingleton<LinkedInOAuthClient>();
+        services.AddSingleton<ILinkedInClient>(sp => sp.GetRequiredService<LinkedInOAuthClient>());
         services.AddSingleton<ILinkedInSyncWorker, LinkedInSyncWorker>();
 
         // AI Providers & Hub
@@ -40,6 +42,7 @@ public partial class App : Application
         services.AddSingleton<OpenAIProvider>();
         services.AddSingleton<MockAIProvider>();
         services.AddSingleton<IAIProvider>(sp => sp.GetRequiredService<GeminiProvider>());
+        services.AddSingleton<IAIProvider>(sp => sp.GetRequiredService<OpenAIProvider>());
         services.AddSingleton<IAIHubService, AIHubService>();
 
         // ViewModels

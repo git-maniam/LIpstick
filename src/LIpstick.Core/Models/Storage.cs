@@ -7,6 +7,8 @@ public record AppConfig
     public string Theme { get; init; } = "Light"; // Light, Dark, System
     public string? SelectedProvider { get; init; } = "Google Gemini";
     public string? SelectedModel { get; init; } = "gemini-2.0-flash";
+    public string? GeminiCustomBaseUrl { get; init; }
+    public string? OpenAiCustomBaseUrl { get; init; }
     public bool TelemetryEnabled { get; init; } = false;
     public string DataDirectory { get; init; } = "";
     public DateTime LastUpdated { get; init; } = DateTime.UtcNow;

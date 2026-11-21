@@ -12,6 +12,7 @@ public partial class ImproveViewModel : ObservableObject
     private readonly IHumanizerEngine _humanizer;
     private readonly ILinkedInSyncWorker _syncWorker;
     private readonly ILocalDataService _dataService;
+    private readonly IAIHubService? _aiHub;
 
     [ObservableProperty]
     private string _selectedSection = "Headline";
@@ -50,18 +51,28 @@ public partial class ImproveViewModel : ObservableObject
     private string _statusMessage = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GenerationMetadata))]
+    private AICompletionResult? _lastCompletion;
+
+    public string GenerationMetadata => LastCompletion is null
+        ? string.Empty
+        : $"{LastCompletion.ModelId} • {LastCompletion.LatencyMilliseconds} ms • input {LastCompletion.PromptTokenCount?.ToString() ?? "n/a"} tokens • output {LastCompletion.ResponseTokenCount?.ToString() ?? "n/a"} tokens";
+
+    [ObservableProperty]
     private List<DiffChunk> _diffChunks = new();
 
     public ImproveViewModel(
         ILinkedInClient linkedInClient,
         IHumanizerEngine humanizer,
         ILinkedInSyncWorker syncWorker,
-        ILocalDataService dataService)
+        ILocalDataService dataService,
+        IAIHubService? aiHub = null)
     {
         _linkedInClient = linkedInClient;
         _humanizer = humanizer;
         _syncWorker = syncWorker;
         _dataService = dataService;
+        _aiHub = aiHub;
     }
 
     public async Task InitializeAsync()
@@ -166,5 +177,43 @@ If you want to streamline your team's workflow, send a DM or email me at alex@ex
         var (cleaned, _) = _humanizer.CleanText(ToBeText);
         ToBeText = cleaned;
         UpdateScoreAndDiff();
+    }
+
+    [RelayCommand]
+    public async Task ReGenerateAsync()
+    {
+        StatusMessage = "Re-generating recommendation with AI...";
+        try
+        {
+            if (_aiHub != null)
+            {
+                var config = await _dataService.LoadConfigAsync();
+                string model = config.SelectedModel ?? "gemini-2.0-flash";
+                var req = new RecommendationRequest(
+                    SelectedSection,
+                    AsIsText,
+                    "Direct, outcome-driven, professional, human",
+                    new Dictionary<string, object>(),
+                    model);
+
+                var completion = await _aiHub.GenerateCompletionAsync(req);
+                LastCompletion = completion;
+                var generated = completion.Text;
+                if (!string.IsNullOrWhiteSpace(generated))
+                {
+                    ToBeText = generated.Trim();
+                    StatusMessage = "✓ Recommendation updated with fresh AI draft.";
+                }
+            }
+            else
+            {
+                CleanAndHumanize();
+                StatusMessage = "✓ Applied humanizer clean and de-slop.";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"✗ Re-generate failed: {ex.Message}";
+        }
     }
 }

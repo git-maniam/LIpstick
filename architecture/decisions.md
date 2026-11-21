@@ -25,12 +25,12 @@ LIpstick bridges personal LinkedIn optimization with multi-provider generative A
 - **UI & Materials:** Fluent Design System, Mica backdrop with fallback to solid background on downlevel builds, Acrylic flyouts, 8–12px corner radii, Segoe UI Variable typography.
 
 ### 2.2 LinkedIn Authentication & Profile Synchronization Feasibility
-- **Authentication:** Embedded WebView2 control executing LinkedIn OAuth 2.0 (`r_liteprofile`, `w_member_social`, `openid`, `profile`, `email`) and managing persistent authenticated browser sessions.
+- **Authentication:** Native desktop OAuth using the system browser, loopback redirect, and PKCE (S256). LinkedIn must enable native PKCE for the registered application. Do not embed LinkedIn authentication in WebView2 or ship a shared client secret.
 - **Write-Back Reality & Policy:** Official public LinkedIn Member APIs do not provide arbitrary write endpoints for personal profile fields (Headline, Summary/About, Experience) to general third-party developer applications.
 - **Adopted Strategy (Hybrid Approach):**
   1. Extensible `ILinkedInSyncWorker` architecture with typed `UpdateOutcome` (`Succeeded`, `Failed`, `Unsupported`, `Unknown`).
   2. Deterministic mock / sandbox provider for all automated contract and regression testing (ST/LI/AP suites).
-  3. WebView2 session-assisted profile synchronization.
+  3. WebView2 may assist a user with manual profile edits after explicit confirmation; it does not bypass LinkedIn API permissions or automate unsupported writes.
   4. 1-click fallback: "Copy to Clipboard & Open LinkedIn Profile Editor" when official REST write scopes are restricted or unavailable, ensuring zero dead ends for the user.
 
 ### 2.3 AI Provider Architecture & Model Hub

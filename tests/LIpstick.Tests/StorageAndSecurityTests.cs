@@ -204,76 +204,89 @@ public class StorageAndSecurityTests
     public async Task ST_03_Restart_Bookmark_Saves_InFlight_Session_And_Draft_Atomically()
     {
         string bookmarkFile = Path.Combine(_testDir, "bookmark.json");
-        var bookmarkData = new
+        var bookmark = new SessionBookmark
         {
-            PageRoute = "ImprovePage",
+            ActivePageRoute = "ImprovePage",
             ActiveSection = "Headline",
-            InFlightDraft = "Building AI agents that save B2B teams 10h/wk | $4.2M pipeline | Ops @ Acme",
-            SessionMemberId = "mem-12345",
-            Timestamp = DateTime.UtcNow
+            UnsavedDraftText = "Building AI agents that save B2B teams 10h/wk | $4.2M pipeline | Ops @ Acme",
+            LinkedInSessionState = "Connected",
+            ActiveModelId = "gemini-2.0-flash",
+            SavedAtUtc = DateTime.UtcNow
         };
 
-        // Atomic write via temp file
-        string tempPath = bookmarkFile + ".tmp";
-        string json = System.Text.Json.JsonSerializer.Serialize(bookmarkData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(tempPath, json);
-        File.Move(tempPath, bookmarkFile, overwrite: true);
+        await _dataService.SaveRestartBookmarkAsync(bookmark);
 
-        Assert.IsTrue(File.Exists(bookmarkFile), "Bookmark file must exist after atomic save");
-        string loadedJson = await File.ReadAllTextAsync(bookmarkFile);
-        Assert.IsTrue(loadedJson.Contains("ImprovePage"));
-        Assert.IsTrue(loadedJson.Contains("Building AI agents"));
+        Assert.IsTrue(File.Exists(bookmarkFile), "Bookmark file must exist after service atomic save");
+        var loaded = await _dataService.GetRestartBookmarkAsync();
+        Assert.IsNotNull(loaded, "Bookmark must be loadable via ILocalDataService");
+        Assert.AreEqual("ImprovePage", loaded.ActivePageRoute);
+        Assert.AreEqual("Headline", loaded.ActiveSection);
+        Assert.AreEqual(bookmark.UnsavedDraftText, loaded.UnsavedDraftText);
+        Assert.AreEqual("Connected", loaded.LinkedInSessionState);
+        Assert.AreEqual("gemini-2.0-flash", loaded.ActiveModelId);
     }
 
     [TestMethod]
     public async Task ST_03b_Restart_Bookmark_Restores_State_On_Startup_After_Simulated_Reboot()
     {
-        string bookmarkFile = Path.Combine(_testDir, "bookmark.json");
         var expectedDraft = "Building AI agents saving teams 10h/wk | $4.2M pipeline";
-        var bookmarkData = new
+        var bookmark = new SessionBookmark
         {
-            PageRoute = "ImprovePage",
+            ActivePageRoute = "ImprovePage",
             ActiveSection = "Headline",
-            InFlightDraft = expectedDraft,
-            SessionMemberId = "mem-12345",
-            Timestamp = DateTime.UtcNow
+            UnsavedDraftText = expectedDraft,
+            LinkedInSessionState = "Connected",
+            ActiveModelId = "gpt-4o",
+            SavedAtUtc = DateTime.UtcNow
         };
 
-        string json = System.Text.Json.JsonSerializer.Serialize(bookmarkData);
-        await File.WriteAllTextAsync(bookmarkFile, json);
+        await _dataService.SaveRestartBookmarkAsync(bookmark);
 
-        // Simulate app restart / reboot: verify restoration from bookmark.json
-        Assert.IsTrue(File.Exists(bookmarkFile));
-        using var doc = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(bookmarkFile));
-        var root = doc.RootElement;
+        // Simulate app restart / reboot: instantiate a fresh service pointing to the same data directory
+        var rebootService = new LocalDataService(_testDir);
+        var restored = await rebootService.GetRestartBookmarkAsync();
 
-        string route = root.GetProperty("PageRoute").GetString()!;
-        string section = root.GetProperty("ActiveSection").GetString()!;
-        string draft = root.GetProperty("InFlightDraft").GetString()!;
-
-        Assert.AreEqual("ImprovePage", route);
-        Assert.AreEqual("Headline", section);
-        Assert.AreEqual(expectedDraft, draft);
+        Assert.IsNotNull(restored, "Fresh service instance must restore saved bookmark on startup");
+        Assert.AreEqual("ImprovePage", restored.ActivePageRoute);
+        Assert.AreEqual("Headline", restored.ActiveSection);
+        Assert.AreEqual(expectedDraft, restored.UnsavedDraftText);
+        Assert.AreEqual("gpt-4o", restored.ActiveModelId);
     }
 
     [TestMethod]
     public async Task ST_03c_Restart_Bookmark_Clears_On_Clean_Application_Exit()
     {
-        string bookmarkFile = Path.Combine(_testDir, "bookmark.json");
-        await File.WriteAllTextAsync(bookmarkFile, "{\"PageRoute\":\"ImprovePage\"}");
-        Assert.IsTrue(File.Exists(bookmarkFile));
-
-        // Clean exit removes bookmark
-        if (File.Exists(bookmarkFile))
+        var bookmark = new SessionBookmark
         {
-            File.Delete(bookmarkFile);
-        }
+            ActivePageRoute = "ImprovePage",
+            UnsavedDraftText = "In-flight draft to be cleared"
+        };
+        await _dataService.SaveRestartBookmarkAsync(bookmark);
+        var existing = await _dataService.GetRestartBookmarkAsync();
+        Assert.IsNotNull(existing);
 
-        Assert.IsFalse(File.Exists(bookmarkFile), "Bookmark must be cleared on clean exit to avoid stale restorations");
+        // Clean application exit invokes ClearRestartBookmarkAsync
+        await _dataService.ClearRestartBookmarkAsync();
+
+        var cleared = await _dataService.GetRestartBookmarkAsync();
+        Assert.IsNull(cleared, "Bookmark must be null after clean exit clear");
+        string bookmarkFile = Path.Combine(_testDir, "bookmark.json");
+        Assert.IsFalse(File.Exists(bookmarkFile), "Bookmark file must not exist on disk after clean clear");
     }
 
     [TestMethod]
-    public void ST_03_ProfileHistoryItem_Formatting_And_JsonIgnore()
+    public async Task ST_03d_Restart_Bookmark_Corrupted_File_Returns_Null_Without_Crashing()
+    {
+        string bookmarkFile = Path.Combine(_testDir, "bookmark.json");
+        await File.WriteAllTextAsync(bookmarkFile, "{ invalid truncated JSON...");
+
+        var restored = await _dataService.GetRestartBookmarkAsync();
+        Assert.IsNull(restored, "Corrupted bookmark file must safely return null instead of crashing startup");
+        Assert.IsTrue(File.Exists(bookmarkFile + ".corrupt.bak"), "Corrupted bookmark file must be preserved as .bak");
+    }
+
+    [TestMethod]
+    public void ST_04_ProfileHistoryItem_Formatting_And_JsonIgnore()
     {
         var dt = new DateTime(2026, 11, 21, 14, 30, 0, DateTimeKind.Utc);
         var item = new ProfileHistoryItem(

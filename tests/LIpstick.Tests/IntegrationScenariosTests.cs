@@ -257,47 +257,43 @@ public class IntegrationScenariosTests
     [TestMethod]
     public async Task RE_06_Reboot_Bookmark_Lifecycle_Saves_InFlight_State_And_Restores_After_Simulated_Crash()
     {
-        string bookmarkPath = Path.Combine(_testDir, "bookmark.json");
         string inFlightDraft = "Building AI agents saving teams 10 hours a week | $4.2M pipeline | Ops @ Acme";
 
         // 1. User is on ImprovePage with an in-flight uncommitted draft
-        var checkpoint = new
+        var checkpoint = new SessionBookmark
         {
-            PageRoute = "ImprovePage",
+            ActivePageRoute = "ImprovePage",
             ActiveSection = "Headline",
-            InFlightDraft = inFlightDraft,
-            SessionMemberId = "mem-12345",
-            Timestamp = DateTime.UtcNow
+            UnsavedDraftText = inFlightDraft,
+            LinkedInSessionState = "Connected",
+            ActiveModelId = "gemini-2.0-flash",
+            SavedAtUtc = DateTime.UtcNow
         };
 
-        // Save atomic checkpoint
-        string tmp = bookmarkPath + ".tmp";
-        string json = JsonSerializer.Serialize(checkpoint, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(tmp, json);
-        File.Move(tmp, bookmarkPath, overwrite: true);
-        Assert.IsTrue(File.Exists(bookmarkPath), "Checkpoint must be written to disk");
+        // Save atomic checkpoint through ILocalDataService
+        await _dataService.SaveRestartBookmarkAsync(checkpoint);
+        string bookmarkPath = Path.Combine(_testDir, "bookmark.json");
+        Assert.IsTrue(File.Exists(bookmarkPath), "Checkpoint file must be written to disk by service");
 
         // 2. Simulate machine reboot / app restart
-        // App boots up and detects bookmark.json
-        Assert.IsTrue(File.Exists(bookmarkPath));
-        using (var doc = JsonDocument.Parse(await File.ReadAllTextAsync(bookmarkPath)))
-        {
-            var root = doc.RootElement;
-            string restoredRoute = root.GetProperty("PageRoute").GetString()!;
-            string restoredSection = root.GetProperty("ActiveSection").GetString()!;
-            string restoredDraft = root.GetProperty("InFlightDraft").GetString()!;
+        // Fresh service instance simulates new application startup
+        var rebootDataService = new LocalDataService(_testDir);
+        var restored = await rebootDataService.GetRestartBookmarkAsync();
 
-            Assert.AreEqual("ImprovePage", restoredRoute, "Route must restore to ImprovePage");
-            Assert.AreEqual("Headline", restoredSection, "Section must restore to Headline");
-            Assert.AreEqual(inFlightDraft, restoredDraft, "Draft text must be preserved after crash/reboot");
-        }
+        Assert.IsNotNull(restored, "Bookmark must be recovered on startup after simulated reboot");
+        Assert.AreEqual("ImprovePage", restored.ActivePageRoute, "Route must restore to ImprovePage");
+        Assert.AreEqual("Headline", restored.ActiveSection, "Section must restore to Headline");
+        Assert.AreEqual(inFlightDraft, restored.UnsavedDraftText, "Draft text must be preserved after crash/reboot");
+        Assert.AreEqual("gemini-2.0-flash", restored.ActiveModelId);
 
         // 3. User applies the restored draft
-        var applyResult = await _syncWorker.UpdateHeadlineAsync(inFlightDraft);
+        var applyResult = await _syncWorker.UpdateHeadlineAsync(restored.UnsavedDraftText!);
         Assert.AreEqual(UpdateOutcome.Succeeded, applyResult.Outcome);
 
-        // 4. On clean completion / exit, bookmark.json is cleared
-        File.Delete(bookmarkPath);
+        // 4. On clean completion / exit, bookmark is cleared via service
+        await rebootDataService.ClearRestartBookmarkAsync();
         Assert.IsFalse(File.Exists(bookmarkPath), "Bookmark must be deleted after clean completion");
+        var finalBookmark = await rebootDataService.GetRestartBookmarkAsync();
+        Assert.IsNull(finalBookmark, "Bookmark must be null after clean clear");
     }
 }

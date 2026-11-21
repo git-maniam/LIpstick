@@ -32,6 +32,9 @@
                         </StackPanel>
                         <TextBlock Text="{x:Bind ViewModel.LinkedInUser, Mode=OneWay}" FontWeight="Medium" FontSize="14" />
                         <TextBlock Text="{x:Bind ViewModel.LinkedInHeadline, Mode=OneWay}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                        <TextBlock Text="{x:Bind ViewModel.LinkedInStatusMessage, Mode=OneWay}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                        <TextBox Header="LinkedIn Client ID" Text="{x:Bind ViewModel.LinkedInClientId, Mode=TwoWay}" />
+                        <Button Content="Save LinkedIn Client ID" Command="{x:Bind ViewModel.SaveLinkedInCredentialsCommand}" HorizontalAlignment="Left" />
                     </StackPanel>
 
                     <Button Grid.Column="1" VerticalAlignment="Center" Content="{x:Bind ViewModel.IsLinkedInConnected, Mode=OneWay, Converter={StaticResource BoolToDisconnectButtonTextConverter}}" Command="{x:Bind ViewModel.ToggleLinkedInConnectionCommand}" />

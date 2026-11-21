@@ -62,7 +62,7 @@ public class MockAIProvider : IAIProvider
         LastAssembledPrompt = PromptContextAssembler.AssemblePrompt(request);
 
         if (SimulateInvalidKey)
-            throw new AIProviderException(ProviderName, "API key is invalid or expired", AIErrorCodes.Unauthorized);
+            throw new AIProviderException(ProviderName, "API key is invalid or expired", AIErrorCodes.InvalidKey);
 
         if (SimulateQuotaExceeded)
             throw new AIProviderException(ProviderName, "Rate limit or quota exceeded for current tier", AIErrorCodes.QuotaExceeded);

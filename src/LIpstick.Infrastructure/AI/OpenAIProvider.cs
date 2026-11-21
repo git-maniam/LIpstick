@@ -1,6 +1,8 @@
-using System.Net.Http.Headers;
-using System.Text;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Text.Json;
+using OpenAI;
+using OpenAI.Chat;
 using LIpstick.Core.Interfaces;
 using LIpstick.Core.Models;
 using LIpstick.Core.Services;
@@ -40,8 +42,12 @@ public class OpenAIProvider : IAIProvider
         };
     }
 
-    public async Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default) =>
+        (await GenerateCompletionAsync(request, cancellationToken)).Text;
+
+    public async Task<AICompletionResult> GenerateCompletionAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
     {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
         var apiKey = await _secureStorage.GetSecretAsync("OPENAI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -53,86 +59,27 @@ public class OpenAIProvider : IAIProvider
             ? CustomBaseUrl
             : (request.RubricCriteria?.TryGetValue("CustomBaseUrl", out var customUrl) == true ? customUrl.ToString()! : "https://api.openai.com/v1");
 
-        string endpoint = $"{baseUrl.TrimEnd('/')}/chat/completions";
-
         var prompt = PromptContextAssembler.AssemblePrompt(request);
-        var payload = new
-        {
-            model = model,
-            messages = new[]
-            {
-                new
-                {
-                    role = "system",
-                    content = "You are an elite LinkedIn profile editor. Output ONLY the polished humanized draft without conversational preamble or formatting tags. Never use AI buzzwords (delve, seamless, testament, spearhead, passionate)."
-                },
-                new
-                {
-                    role = "user",
-                    content = prompt
-                }
-            },
-            temperature = 0.5,
-            max_tokens = 700
-        };
-
-        var json = JsonSerializer.Serialize(payload);
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint);
-        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
         try
         {
-            using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
-            var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            var options = new OpenAIClientOptions
             {
-                string errorCode = response.StatusCode switch
-                {
-                    System.Net.HttpStatusCode.TooManyRequests => AIErrorCodes.RateLimitExceeded,
-                    System.Net.HttpStatusCode.Forbidden => AIErrorCodes.QuotaExceeded,
-                    System.Net.HttpStatusCode.Unauthorized => AIErrorCodes.Unauthorized,
-                    _ => response.StatusCode.ToString()
-                };
-
-                string errorMessage = $"API returned status {response.StatusCode}";
-                try
-                {
-                    using var errDoc = JsonDocument.Parse(responseString);
-                    if (errDoc.RootElement.TryGetProperty("error", out var errElement))
-                    {
-                        if (errElement.TryGetProperty("message", out var msgElement))
-                        {
-                            errorMessage = msgElement.GetString() ?? errorMessage;
-                        }
-                        if (errElement.TryGetProperty("code", out var codeElement))
-                        {
-                            var codeStr = codeElement.GetString();
-                            if (string.Equals(codeStr, "insufficient_quota", StringComparison.OrdinalIgnoreCase))
-                            {
-                                errorCode = AIErrorCodes.QuotaExceeded;
-                            }
-                        }
-                    }
-                }
-                catch { }
-
-                errorMessage = errorMessage.Replace(apiKey, "[REDACTED]");
-                throw new AIProviderException(ProviderName, errorMessage, errorCode);
-            }
-
-            using var doc = JsonDocument.Parse(responseString);
-            var root = doc.RootElement;
-            var choices = root.GetProperty("choices");
-            if (choices.GetArrayLength() > 0)
+                Endpoint = new Uri(baseUrl.TrimEnd('/') + "/"),
+                Transport = new HttpClientPipelineTransport(_httpClient)
+            };
+            var client = new ChatClient(model, new ApiKeyCredential(apiKey), options);
+            ChatMessage[] messages =
             {
-                var choice = choices[0];
-                var message = choice.GetProperty("message");
-                return message.GetProperty("content").GetString() ?? string.Empty;
-            }
-
-            return string.Empty;
+                new SystemChatMessage("You are an elite LinkedIn profile editor. Output ONLY the polished humanized draft without conversational preamble or formatting tags. Never use AI buzzwords (delve, seamless, testament, spearhead, passionate)."),
+                new UserChatMessage(prompt)
+            };
+            var result = await client.CompleteChatAsync(messages, new ChatCompletionOptions { MaxOutputTokenCount = 700 }, cancellationToken);
+            var completion = result.Value;
+            string responseJson = result.GetRawResponse().Content.ToString();
+            timer.Stop();
+            string text = string.Join("", completion.Content.Select(part => part.Text));
+            return ExtractUsage(responseJson, text, model, (int)timer.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -146,9 +93,44 @@ public class OpenAIProvider : IAIProvider
         {
             throw new AIProviderException(ProviderName, "Network or protocol error calling OpenAI API.", AIErrorCodes.NetworkError, ex);
         }
+        catch (ClientResultException ex)
+        {
+            string code = ex.Status switch
+            {
+                401 => AIErrorCodes.InvalidKey,
+                403 => AIErrorCodes.QuotaExceeded,
+                429 => AIErrorCodes.RateLimitExceeded,
+                >= 200 and < 300 => AIErrorCodes.MalformedResponse,
+                _ => AIErrorCodes.NetworkError
+            };
+            throw new AIProviderException(ProviderName, "OpenAI request failed. Check credentials, quota, and endpoint settings.", code, ex);
+        }
         catch (Exception ex) when (ex is not AIProviderException)
         {
             throw new AIProviderException(ProviderName, "Network or protocol error calling OpenAI API.", AIErrorCodes.NetworkError, ex);
+        }
+    }
+
+    private AICompletionResult ExtractUsage(string responseJson, string text, string model, int latencyMilliseconds)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            throw new AIProviderException(ProviderName, "OpenAI returned no generated text.", AIErrorCodes.MalformedResponse);
+
+        try
+        {
+            using var doc = JsonDocument.Parse(responseJson);
+            int? promptTokens = null;
+            int? responseTokens = null;
+            if (doc.RootElement.TryGetProperty("usage", out var usage))
+            {
+                if (usage.TryGetProperty("prompt_tokens", out var prompt) && prompt.TryGetInt32(out var promptCount)) promptTokens = promptCount;
+                if (usage.TryGetProperty("completion_tokens", out var response) && response.TryGetInt32(out var responseCount)) responseTokens = responseCount;
+            }
+            return new AICompletionResult(text, model, promptTokens, responseTokens, latencyMilliseconds);
+        }
+        catch (JsonException ex)
+        {
+            throw new AIProviderException(ProviderName, "OpenAI returned a malformed generation response.", AIErrorCodes.MalformedResponse, ex);
         }
     }
 }

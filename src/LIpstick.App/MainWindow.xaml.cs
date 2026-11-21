@@ -4,6 +4,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using LIpstick.Core.Models;
 using LIpstick_App.Pages;
 using LIpstick_App.ViewModels;
 
@@ -141,7 +142,11 @@ public sealed partial class MainWindow : Window
 
     private async void ModelSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ModelSelector.SelectedItem is string model)
+        if (ModelSelector.SelectedItem is ModelInfo modelInfo)
+        {
+            await ViewModel.SelectModelAsync(modelInfo.Id);
+        }
+        else if (ModelSelector.SelectedItem is string model)
         {
             await ViewModel.SelectModelAsync(model);
         }

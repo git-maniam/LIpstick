@@ -48,8 +48,9 @@ This repository contains the complete specification, data dictionaries, heuristi
    - Sign in with OpenAI (GPT-4o, o3-mini via OpenAI .NET SDK).
    - Dynamic Model Selector dropdown in the modern custom title bar.
 3. **LinkedIn Session & Profile Scan:**
-   - Connect to LinkedIn account via embedded WebView2 / OAuth 2.0.
-   - Scan button evaluates profile against the 100-point rubric in `data/rubric.json`.
+   - Connect through LinkedIn OAuth in the system browser with a loopback callback; tokens and the app secret are stored with DPAPI.
+   - Current OAuth scopes provide OpenID Connect identity data. Additional profile fields and write-back require the corresponding LinkedIn product permissions and are not implied by sign-in.
+   - Scan button evaluates available profile data against the 100-point rubric in `data/rubric.json`.
 4. **Side-by-Side Recommendations & Real-Time C# Humanizer:**
    - Side-by-side diff comparison between current profile and AI rewrite.
    - Real-time scoring and cleaning engine (invisible Unicode removal, typographic normalization, slop scrub) ensuring high human score ($\text{PASS} \ge 70$).
@@ -64,6 +65,10 @@ This repository contains the complete specification, data dictionaries, heuristi
 - **.NET 10 SDK** (or higher)
 - **Visual Studio 2026 / Visual Studio Code** with C# Dev Kit and Windows App SDK workloads
 - Windows 11 (build 22000+) or Windows 10 (version 1809+, build 17763+)
+
+### LinkedIn OAuth setup
+
+Register a LinkedIn developer application, request native OAuth PKCE enablement from LinkedIn, and save its Client ID in LIpstick's Connections page. Choose Connect to sign in through the system browser; LIpstick listens on a random loopback port and uses PKCE without embedding a client secret. Access to profile fields beyond OpenID Connect identity depends on the products and permissions approved for that LinkedIn application.
 
 ## Dependency-first implementation plan
 

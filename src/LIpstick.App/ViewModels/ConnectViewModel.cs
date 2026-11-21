@@ -18,7 +18,13 @@ public partial class ConnectViewModel : ObservableObject
     private string _linkedInHeadline = "Senior Product Manager at Acme Corp";
 
     [ObservableProperty]
-    private bool _isLinkedInConnected = true;
+    private bool _isLinkedInConnected;
+
+    [ObservableProperty]
+    private string _linkedInStatusMessage = "Configure your LinkedIn developer app to connect.";
+
+    [ObservableProperty]
+    private string _linkedInClientId = "";
 
     [ObservableProperty]
     private string _geminiApiKey = "";
@@ -52,6 +58,7 @@ public partial class ConnectViewModel : ObservableObject
     {
         var session = await _linkedInClient.GetSessionInfoAsync();
         IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
+        LinkedInStatusMessage = session.StatusMessage ?? (IsLinkedInConnected ? "Connected" : "Not connected.");
         if (IsLinkedInConnected)
         {
             LinkedInUser = session.FullName ?? "Connected Member";
@@ -81,6 +88,7 @@ public partial class ConnectViewModel : ObservableObject
             {
                 var session = await _linkedInClient.ConnectAsync();
                 IsLinkedInConnected = session.State == LinkedInConnectionState.Connected;
+                LinkedInStatusMessage = session.StatusMessage ?? (IsLinkedInConnected ? "Connected" : "Not connected.");
                 if (IsLinkedInConnected)
                 {
                     LinkedInUser = session.FullName ?? "Connected Member";
@@ -92,9 +100,29 @@ public partial class ConnectViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             IsLinkedInConnected = false;
+            LinkedInStatusMessage = "Sign-in was cancelled.";
             LinkedInUser = "Disconnected";
             LinkedInHeadline = "Connection was cancelled.";
         }
+        catch (Exception ex)
+        {
+            IsLinkedInConnected = false;
+            LinkedInStatusMessage = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    public async Task SaveLinkedInCredentialsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(LinkedInClientId))
+        {
+            LinkedInStatusMessage = "Enter the LinkedIn Client ID.";
+            return;
+        }
+
+        await _secureStorage.StoreSecretAsync("LINKEDIN_CLIENT_ID", LinkedInClientId.Trim());
+        await _secureStorage.DeleteSecretAsync("LINKEDIN_CLIENT_SECRET");
+        LinkedInStatusMessage = "Client ID saved. Request native OAuth PKCE enablement for your LinkedIn app before connecting.";
     }
 
     [RelayCommand]

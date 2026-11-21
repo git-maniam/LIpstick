@@ -26,9 +26,17 @@ public record ModelInfo(
     public override string ToString() => $"{DisplayName} ({MetadataSummary})";
 }
 
+public record AICompletionResult(
+    string Text,
+    string ModelId,
+    int? PromptTokenCount,
+    int? ResponseTokenCount,
+    int LatencyMilliseconds);
+
 public static class AIErrorCodes
 {
     public const string NoApiKey = "NO_API_KEY";
+    public const string InvalidKey = "INVALID_KEY";
     public const string Unauthorized = "UNAUTHORIZED";
     public const string RateLimitExceeded = "RATE_LIMIT_EXCEEDED";
     public const string QuotaExceeded = "RESOURCE_EXHAUSTED";

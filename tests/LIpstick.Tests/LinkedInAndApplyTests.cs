@@ -2,6 +2,7 @@ using LIpstick.Core.Models;
 using LIpstick.Core.Services;
 using LIpstick.Infrastructure.LinkedIn;
 using LIpstick.Infrastructure.Storage;
+using LIpstick.Tests.Fakes;
 
 namespace LIpstick.Tests;
 
@@ -407,5 +408,229 @@ public class LinkedInAndApplyTests
 
         var history = await _dataService.LoadHistoryAsync();
         Assert.AreEqual(0, history.Items.Count);
+    }
+
+    [TestMethod]
+    public async Task LI_01c_OAuth_Callback_Exchanges_Code_For_Token_And_Stores_In_DPAPI()
+    {
+        var mockHandler = new MockHttpMessageHandler
+        {
+            ResponseContent = @"{ ""access_token"": ""live_oauth_token_777"", ""expires_in"": 5184000, ""id"": ""mem-777"" }"
+        };
+        var httpClient = new HttpClient(mockHandler);
+        var oauthClient = new LinkedInOAuthClient(_secureStorage, httpClient);
+
+        var session = await oauthClient.ExchangeCodeForTokenAsync(
+            code: "auth_code_xyz",
+            state: "csrf_state_123",
+            expectedState: "csrf_state_123",
+            redirectUri: "http://127.0.0.1:12345/callback/",
+            codeVerifier: "test-verifier"
+        );
+
+        Assert.AreEqual(LinkedInConnectionState.Connected, session.State);
+        Assert.AreEqual("mem-777", session.MemberId);
+
+        string? storedToken = await _secureStorage.GetSecretAsync("LINKEDIN_ACCESS_TOKEN");
+        Assert.AreEqual("live_oauth_token_777", storedToken);
+
+        string? storedMemberId = await _secureStorage.GetSecretAsync("LINKEDIN_MEMBER_ID");
+        Assert.AreEqual("mem-777", storedMemberId);
+    }
+
+    [TestMethod]
+    public async Task LI_01d_Live_OAuth_Requires_Developer_Credentials_And_Does_Not_Fabricate_Session()
+    {
+        var oauthClient = new LinkedInOAuthClient(_secureStorage, new HttpClient(new MockHttpMessageHandler()));
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => oauthClient.ConnectAsync());
+
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN"));
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_MEMBER_ID"));
+    }
+
+    [TestMethod]
+    public async Task LI_01e_Native_OAuth_Uses_PKCE_And_Random_Loopback_Callback()
+    {
+        await _secureStorage.StoreSecretAsync("LINKEDIN_CLIENT_ID", "client-123");
+        var mockHandler = new MockHttpMessageHandler
+        {
+            ResponseContent = "{ \"access_token\": \"oauth-token\", \"expires_in\": 5184000, \"id\": \"member-123\" }"
+        };
+        var callbackClient = new HttpClient();
+        string? launchedUrl = null;
+        var oauthClient = new LinkedInOAuthClient(
+            _secureStorage,
+            new HttpClient(mockHandler),
+            browserLauncher: url =>
+            {
+                launchedUrl = url;
+                var query = ParseQuery(new Uri(url).Query);
+                string callback = query["redirect_uri"];
+                string state = Uri.EscapeDataString(query["state"]);
+                _ = Task.Run(async () => await callbackClient.GetAsync($"{callback}?code=auth-code&state={state}"));
+            });
+
+        var session = await oauthClient.ConnectAsync();
+
+        Assert.AreEqual(LinkedInConnectionState.Connected, session.State);
+        Assert.IsNotNull(launchedUrl);
+        Assert.Contains("/oauth/native-pkce/authorization?", launchedUrl);
+        var authParams = ParseQuery(new Uri(launchedUrl).Query);
+        Assert.AreEqual("S256", authParams["code_challenge_method"]);
+        Assert.IsTrue(authParams["code_challenge"].Length >= 43);
+        Assert.IsTrue(authParams["redirect_uri"].StartsWith("http://127.0.0.1:", StringComparison.Ordinal));
+        Assert.IsTrue(authParams["redirect_uri"].EndsWith("/callback/", StringComparison.Ordinal));
+        Assert.IsFalse(authParams["redirect_uri"].Contains("53682"), "Callback must use a dynamically allocated port.");
+
+        string tokenRequest = mockHandler.CapturedRequestBodies[0];
+        Assert.Contains("code_verifier=", tokenRequest);
+        Assert.DoesNotContain("client_secret", tokenRequest);
+
+        static Dictionary<string, string> ParseQuery(string query) => query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=', 2))
+            .ToDictionary(pair => Uri.UnescapeDataString(pair[0]), pair => Uri.UnescapeDataString(pair[1]));
+    }
+
+    [TestMethod]
+    public async Task LI_05d_Profile_Request_Failure_Is_Reported_Without_Demo_Data()
+    {
+        await _secureStorage.StoreSecretAsync("LINKEDIN_ACCESS_TOKEN", "valid_test_token");
+        var mockHandler = new MockHttpMessageHandler { StatusCode = System.Net.HttpStatusCode.Forbidden };
+        var oauthClient = new LinkedInOAuthClient(_secureStorage, new HttpClient(mockHandler));
+
+        await Assert.ThrowsExactlyAsync<HttpRequestException>(() => oauthClient.IngestProfileAsync());
+    }
+
+    [TestMethod]
+    public async Task LI_02b_OAuth_User_Denial_Or_State_Mismatch_Surfaces_Error_And_Leaves_No_Secrets()
+    {
+        var mockHandler = new MockHttpMessageHandler();
+        var httpClient = new HttpClient(mockHandler);
+        var oauthClient = new LinkedInOAuthClient(_secureStorage, httpClient);
+
+        // 1. State mismatch (CSRF tampering)
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
+        {
+            await oauthClient.ExchangeCodeForTokenAsync("valid_code", "tampered_state", "expected_state", "http://127.0.0.1:12345/callback/", "test-verifier");
+        });
+
+        bool hasTokenAfterMismatch = await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN");
+        Assert.IsFalse(hasTokenAfterMismatch, "No token must be written when CSRF state mismatch occurs.");
+
+        // 2. User denial
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(async () =>
+        {
+            await oauthClient.ExchangeCodeForTokenAsync("error=access_denied", "valid_state", "valid_state", "http://127.0.0.1:12345/callback/", "test-verifier");
+        });
+
+        bool hasTokenAfterDenial = await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN");
+        Assert.IsFalse(hasTokenAfterDenial, "No token must be written when authorization is denied.");
+
+        var session = await oauthClient.GetSessionInfoAsync();
+        Assert.AreEqual(LinkedInConnectionState.Disconnected, session.State);
+    }
+
+    [TestMethod]
+    public async Task LI_03c_Failed_Token_Refresh_AutoPurges_DPAPI_And_Sets_Reauth_Trigger()
+    {
+        var clientWithStorage = new MockLinkedInClient(_secureStorage);
+        await clientWithStorage.ConnectAsync();
+
+        bool hasInitialToken = await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN");
+        Assert.IsTrue(hasInitialToken, "Client must store access token after ConnectAsync");
+
+        // Simulate server failure on refresh
+        clientWithStorage.SimulateServerError = true;
+        bool refreshed = await clientWithStorage.RefreshTokenAsync();
+        Assert.IsFalse(refreshed, "Refresh must return false on server error");
+
+        bool hasTokenAfterFailure = await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN");
+        Assert.IsFalse(hasTokenAfterFailure, "Failed refresh must auto-purge expired token from DPAPI");
+
+        var session = await clientWithStorage.GetSessionInfoAsync();
+        Assert.AreEqual(LinkedInConnectionState.Disconnected, session.State);
+    }
+
+    [TestMethod]
+    public async Task LI_04d_Clean_Disconnect_Purges_All_LinkedIn_Secrets_From_DPAPI()
+    {
+        var clientWithStorage = new MockLinkedInClient(_secureStorage);
+        await clientWithStorage.ConnectAsync();
+        await _secureStorage.StoreSecretAsync("LINKEDIN_REFRESH_TOKEN", "mock_refresh_token_123");
+
+        Assert.IsTrue(await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN"));
+        Assert.IsTrue(await _secureStorage.HasSecretAsync("LINKEDIN_REFRESH_TOKEN"));
+        Assert.IsTrue(await _secureStorage.HasSecretAsync("LINKEDIN_MEMBER_ID"));
+        Assert.IsTrue(await _secureStorage.HasSecretAsync("LINKEDIN_TOKEN_EXPIRY"));
+
+        await clientWithStorage.DisconnectAsync();
+
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_ACCESS_TOKEN"));
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_REFRESH_TOKEN"));
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_MEMBER_ID"));
+        Assert.IsFalse(await _secureStorage.HasSecretAsync("LINKEDIN_TOKEN_EXPIRY"));
+
+        var session = await clientWithStorage.GetSessionInfoAsync();
+        Assert.AreEqual(LinkedInConnectionState.Disconnected, session.State);
+    }
+
+    [TestMethod]
+    public void LI_05c_Raw_LinkedIn_Api_Json_Normalizes_To_Profile_DTO()
+    {
+        string rawJson = @"{
+            ""sub"": ""urn:li:person:abcdef"",
+            ""localizedFirstName"": ""Jane"",
+            ""localizedLastName"": ""Doe"",
+            ""localizedHeadline"": ""Director of AI Engineering"",
+            ""localizedSummary"": ""Leading foundational agent architectures."",
+            ""bannerUrl"": """",
+            ""photoUrl"": ""https://media.licdn.com/dms/image/v2/headshot.jpg"",
+            ""vanityName"": ""janedoe"",
+            ""elements"": [
+                {
+                    ""title"": ""Director of AI Engineering"",
+                    ""companyName"": ""Nexus AI"",
+                    ""timePeriod"": ""2023 - Present"",
+                    ""description"": ""Scaled enterprise agent systems.""
+                },
+                {
+                    ""title"": ""Senior Staff Engineer"",
+                    ""companyName"": ""Alpha Cloud"",
+                    ""timePeriod"": ""2020 - 2023"",
+                    ""description"": ""Architected high-throughput message brokers.""
+                }
+            ],
+            ""recommendationsCount"": 4,
+            ""hasCreatorMode"": true
+        }";
+
+        var profile = LinkedInProfileNormalizer.NormalizeJson(rawJson);
+
+        Assert.AreEqual("urn:li:person:abcdef", profile.MemberId);
+        Assert.AreEqual("Jane Doe", profile.FullName);
+        Assert.AreEqual("Director of AI Engineering", profile.Headline);
+        Assert.AreEqual("Leading foundational agent architectures.", profile.About);
+        Assert.IsNull(profile.BannerUrl, "Empty banner URL string must normalize to null");
+        Assert.AreEqual("https://media.licdn.com/dms/image/v2/headshot.jpg", profile.PhotoUrl);
+        Assert.AreEqual("https://linkedin.com/in/janedoe", profile.CustomUrl, "Vanity name must expand to canonical LinkedIn URL");
+
+        Assert.AreEqual(2, profile.Experiences.Count);
+        Assert.AreEqual("exp-1", profile.Experiences[0].Id, "First experience entry must receive deterministic stable id exp-1");
+        Assert.AreEqual("exp-2", profile.Experiences[1].Id, "Second experience entry must receive deterministic stable id exp-2");
+        Assert.IsTrue(profile.Experiences[0].IsCurrent);
+
+        Assert.IsNotNull(profile.Educations, "Educations must not be null when missing in source JSON");
+        Assert.AreEqual(0, profile.Educations.Count);
+
+        Assert.IsNotNull(profile.Skills, "Skills must not be null when missing in source JSON");
+        Assert.AreEqual(0, profile.Skills.Count);
+
+        Assert.IsNotNull(profile.FeaturedItems, "FeaturedItems must not be null when missing in source JSON");
+        Assert.AreEqual(0, profile.FeaturedItems.Count);
+
+        Assert.AreEqual(4, profile.RecommendationsCount);
+        Assert.IsTrue(profile.HasCreatorMode);
     }
 }

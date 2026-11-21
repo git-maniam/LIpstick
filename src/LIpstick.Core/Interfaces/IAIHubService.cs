@@ -8,4 +8,12 @@ public interface IAIHubService
     Task<IReadOnlyList<ModelInfo>> GetAllAvailableModelsAsync(CancellationToken cancellationToken = default);
     IAIProvider ResolveProviderForModel(string modelId);
     Task<string> GenerateRecommendationAsync(RecommendationRequest request, CancellationToken cancellationToken = default);
+
+    async Task<AICompletionResult> GenerateCompletionAsync(RecommendationRequest request, CancellationToken cancellationToken = default)
+    {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var text = await GenerateRecommendationAsync(request, cancellationToken);
+        timer.Stop();
+        return new AICompletionResult(text, request.ModelName, null, null, (int)timer.ElapsedMilliseconds);
+    }
 }
