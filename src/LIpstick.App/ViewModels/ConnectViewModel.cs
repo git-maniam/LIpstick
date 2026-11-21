@@ -128,7 +128,7 @@ public partial class ConnectViewModel : ObservableObject
         LinkedInProfileUrl = value;
         IsLinkedInConnected = true;
         LinkedInUser = "Profile URL saved";
-        LinkedInStatusMessage = "Profile URL saved. Paste your profile text in Scanner to create a scan snapshot.";
+        LinkedInStatusMessage = "Profile URL saved. Scan it directly if public; paste the profile text in Scanner if LinkedIn blocks direct access.";
         await _shellViewModel.InitializeAsync();
     }
 

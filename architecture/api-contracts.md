@@ -62,5 +62,5 @@ public interface ILinkedInClient
 }
 ```
 - LinkedIn passwords and browser sessions remain in the browser and are inaccessible to LIpstick.
-- Profile URL and text snapshot are stored locally. A refresh uses a new snapshot pasted by the user.
-- No automated scraping, browser automation, or profile write API calls are permitted. Recommendations are applied manually by the user.
+- Each explicit scan makes one unauthenticated request to the saved public profile URL; no cookies or bulk requests are sent. Parsed text is cached locally; pasted text is the fallback if direct access is blocked or incomplete.
+- No browser automation or profile write API calls are used. Recommendations are applied manually by the user.

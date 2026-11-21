@@ -1,4 +1,7 @@
 using LIpstick.Infrastructure.LinkedIn;
+using LIpstick.Infrastructure.Storage;
+using LIpstick.Tests.Fakes;
+using LIpstick.Core.Models;
 
 namespace LIpstick.Tests;
 
@@ -34,5 +37,47 @@ public class LinkedInProfileSnapshotTests
         Assert.AreEqual(text, profile.SourceSnapshotText);
         Assert.IsNull(profile.PhotoUrl);
         Assert.IsNull(profile.BannerUrl);
+    }
+
+    [TestMethod]
+    public void ParsesVisibleTextAndOpenGraphMetadataFromPublicProfileHtml()
+    {
+        const string url = "https://www.linkedin.com/in/rsmaniam/";
+        const string html = "<html><head><meta property=\"og:title\" content=\"Ravi Maniam | LinkedIn\"><meta property=\"og:description\" content=\"Product Leader\"></head><body><main><h1>Ravi Maniam</h1><p>Product Leader</p><h2>About</h2><p>I build useful products.</p><h2>Experience</h2><p>VP Product</p><p>Acme Corp</p></main><script>secret noise</script></body></html>";
+
+        var profile = BrowserLinkedInProfileClient.ParsePublicPage(url, html);
+
+        Assert.AreEqual("Ravi Maniam", profile.FullName);
+        Assert.AreEqual("Product Leader", profile.Headline);
+        Assert.AreEqual("I build useful products.", profile.About);
+        StringAssert.Contains(profile.SourceSnapshotText!, "Acme Corp");
+        Assert.IsFalse(profile.SourceSnapshotText!.Contains("secret noise", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task FetchesOnePublicUrlWithoutCookiesAndCachesParsedSnapshot()
+    {
+        const string url = "https://www.linkedin.com/in/rsmaniam/";
+        const string html = "<html><head><meta property=\"og:title\" content=\"Ravi Maniam | LinkedIn\"><meta property=\"og:description\" content=\"Product Leader\"></head><body><main><h1>Ravi Maniam</h1><p>Product Leader</p><h2>About</h2><p>I build useful products.</p></main></body></html>";
+        var testDirectory = Path.Combine(Path.GetTempPath(), $"LIpstickProfileScanTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        try
+        {
+            var storage = new LocalDataService(testDirectory);
+            await storage.SaveConfigAsync(new AppConfig { LinkedInProfileUrl = url });
+            var handler = new MockHttpMessageHandler { ResponseContent = html };
+            var client = new BrowserLinkedInProfileClient(storage, new HttpClient(handler));
+
+            var profile = await client.IngestProfileAsync();
+
+            Assert.AreEqual("Ravi Maniam", profile.FullName);
+            Assert.AreEqual(1, handler.CapturedRequests.Count);
+            Assert.IsFalse(handler.LastRequest!.Headers.Contains("Cookie"));
+            Assert.AreEqual(profile.SourceSnapshotText, (await storage.LoadConfigAsync()).LinkedInProfileText);
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory)) Directory.Delete(testDirectory, recursive: true);
+        }
     }
 }

@@ -26,8 +26,8 @@ LIpstick bridges personal LinkedIn optimization with multi-provider generative A
 
 ### 2.2 LinkedIn Login, Profile Import & Policy
 - **Login:** Open LinkedIn login in the system default browser. The browser may remember the user's credentials. LIpstick never requests, stores, reads, or reuses LinkedIn passwords, cookies, or browser tokens.
-- **Profile access:** User saves their LinkedIn profile URL and pastes profile text they can view into LIpstick. The app stores this snapshot locally and scans it. Refresh requires pasting a new copy after the user edits their LinkedIn profile.
-- **Policy boundary:** Do not scrape LinkedIn pages, automate page interaction, or read the browser's authenticated session. LinkedIn's User Agreement prohibits automated scraping, and full profile API access is not offered to ordinary third-party apps.
+- **Profile access:** User saves a public LinkedIn profile URL. On each explicit Scan action, LIpstick makes one unauthenticated request to that page and parses the content returned. It uses no browser cookies, login credentials, or batch requests. If direct access is blocked or incomplete, the user can paste visible profile text as fallback.
+- **Limits:** Do not bypass sign-in walls, CAPTCHAs, rate limits, or other access controls. Public HTML may omit profile sections; full profile API access remains restricted to approved developers/partners.
 - **Updates:** Recommendations are manual. LIpstick never reports profile writes as successful or implies rollback on LinkedIn. Local history records only local snapshots/recommendations.
 
 ### 2.3 AI Provider Architecture & Model Hub

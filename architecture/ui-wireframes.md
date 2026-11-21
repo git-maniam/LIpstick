@@ -33,7 +33,7 @@ See [`../Connections-Content-History-Settings.png`](../Connections-Content-Histo
 - Confirm destructive data deletion and explain what will be removed.
 
 ### Persistent Sidebar Account Controls
-Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemini. LinkedIn opens the default browser login page and shows profile-setup status; the browser manages any remembered login. Scanner uses a locally saved user-provided profile snapshot. The user pastes a refreshed snapshot after editing LinkedIn; LIpstick does not scrape or apply edits. The model selector lists models only for connected AI providers.
+Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemini. LinkedIn opens the default browser login page and shows profile-setup status; the browser manages any remembered login. Scanner makes one unauthenticated request to the saved public profile URL per explicit scan, with pasted text as fallback. LIpstick does not use browser cookies or apply edits. The model selector lists models only for connected AI providers.
 
 ### 1. Navigation Shell
 ```text
@@ -53,7 +53,7 @@ Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemi
 
 ### 2. Connect Tab (`/connect`)
 - Three cards:
-  1. **LinkedIn Profile Setup Card**: Default-browser login action, saved profile URL field, and profile snapshot instructions.
+  1. **LinkedIn Profile Setup Card**: Default-browser login action, saved public profile URL field, and explanation that Scanner fetches public page content with pasted-text fallback.
   2. **Google Gemini Connection Card**: Sign-in with Google or API Key input, displays account quota and available models (`Gemini 2.5 Flash`, `Gemini 2.0 Flash`, `Gemini 1.5 Pro`).
   3. **OpenAI Connection Card**: API Key input, model list (`GPT-4o`, `o3-mini`).
 

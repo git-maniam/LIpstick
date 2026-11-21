@@ -31,7 +31,8 @@
             <Border Background="#E5EEFF" BorderBrush="#CCDDFE" BorderThickness="1" CornerRadius="12" Padding="16">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Profile snapshot" FontSize="16" FontWeight="SemiBold" Foreground="#14264F" />
-                    <TextBlock Text="Open your saved profile URL in LinkedIn, copy the profile sections, and paste them here. LinkedIn does not allow third-party automated profile scraping. Your snapshot is stored locally; paste an updated copy before each new scan." TextWrapping="Wrap" FontSize="13" Foreground="#30466D" />
+                    <TextBlock Text="Scan fetches your saved public profile URL. If LinkedIn blocks the request or the public page omits sections, copy the visible profile text here and select pasted-snapshot scan. The latest snapshot is stored locally; public scan retries the URL each time." TextWrapping="Wrap" FontSize="13" Foreground="#30466D" />
+                    <CheckBox Content="Scan pasted profile text instead of fetching the public page" IsChecked="{x:Bind ViewModel.UsePastedSnapshot, Mode=TwoWay}" />
                     <TextBox Header="Profile text" PlaceholderText="Paste the visible profile text here, including About, Experience, Education, and Skills sections" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="130" MaxHeight="220" ScrollViewer.VerticalScrollBarVisibility="Auto" Text="{x:Bind ViewModel.ProfileTextInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
             </Border>

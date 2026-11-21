@@ -25,15 +25,15 @@ This plan converts `SPEC.md`, the API contracts, wireframes, data files, and the
 | ST-01 | Corrupt or truncate `config.json`, `voice.md`, `plan.md`, or `history.json`, then restart. | App recovers with defaults, preserves valid records where possible, reports the affected file, and never crashes. |
 | ST-02 | Invoke Clear Local Data and cancel, then confirm. | Cancel changes nothing; confirmation removes only documented local artifacts and reports exactly what was removed. |
 
-### LinkedIn browser login and user-provided profile snapshots (issue #2)
+### LinkedIn browser login and public profile scanning (issue #2)
 
 | ID | Preconditions and steps | Expected result |
 |---|---|---|
 | LI-01 | Click Open LinkedIn Login on a Windows desktop. | The default browser opens `https://www.linkedin.com/login`; browser credential management remains in control. |
 | LI-02 | Enter valid and invalid profile URLs and restart the app. | Only LinkedIn member URLs are accepted and valid URLs persist locally. |
-| LI-03 | Paste a profile snapshot with headline, About, Experience, Education, and Skills, then scan. | The app parses available sections, evaluates the snapshot, and preserves source text without invented identity fields. |
-| LI-04 | Paste an updated snapshot after changing profile text and scan again. | The new local snapshot replaces the prior scan input and yields updated profile values/scores. |
-| LI-05 | Inspect app config and secure storage. | No LinkedIn password, cookie, or browser token is collected or stored; profile URL and text remain local. |
+| LI-03 | Scan one publicly accessible profile URL. | The app makes one unauthenticated request, parses available public metadata/sections, evaluates them, and retains source text without invented identity fields. |
+| LI-04 | Block the public request or return an incomplete page; provide pasted profile text and scan. | The app uses the local fallback and explains whether the result came from public HTML or pasted text. |
+| LI-05 | Inspect requests, app config, and secure storage. | No LinkedIn password, cookie, browser token, or bulk request is sent; profile URL and cached text remain local. |
 | LI-06 | Trigger Apply on a recommendation. | LIpstick never claims to write to LinkedIn; user is told to apply manually and rescan a fresh snapshot. |
 
 ### AI providers and generation (issue #3)

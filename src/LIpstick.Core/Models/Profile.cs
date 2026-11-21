@@ -50,4 +50,5 @@ public record LinkedInProfile(
 {
     /// <summary>Complete user-provided profile text for provenance and future processing.</summary>
     public string? SourceSnapshotText { get; init; }
+    public string? SourceStatus { get; init; }
 }

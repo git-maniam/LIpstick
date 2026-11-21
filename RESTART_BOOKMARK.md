@@ -116,13 +116,15 @@ Persistent app configuration and rollback artifacts are located under `%LocalApp
 - Content Lab now dispatches all 11 skills and renders per-skill input/output surfaces. The deterministic service workflows are still under review for skill-contract fidelity and fabricated-data safeguards; Phase 6 remains In progress (#8).
 - GitHub Project LIpstick: #2 LinkedIn OAuth, #3 provider adapters, and #8 Content Lab are In progress. UI fidelity bugs #12–#14 are Backlog.
 - Visual worktree changes are ready for user review; the app was not relaunched after the last modifications.
-- External acceptance still requires LinkedIn native-PKCE app enablement/credentials and live provider credentials. Wireframe visual comparison remains next via #12–#14.
+- LinkedIn public-page scans do not require a developer app. Live AI provider validation still requires provider credentials; wireframe visual comparison remains tracked by #12–#14.
 - Next after restart: inspect this branch/worktree and commit history; resume Phase 6 contract/factuality review, then capture the remaining Phase 2 live-credential evidence. Do not mark these milestones complete without evidence.
 
-### LinkedIn product-flow correction — 2026-11-21 (supersedes earlier OAuth/PKCE notes)
-- Product requirement: ordinary users do not need a LinkedIn developer app or ID. **Open LinkedIn Login** launches the default browser; the browser may remember sign-in. LIpstick never reads or stores LinkedIn passwords, browser cookies, or session tokens.
-- Save the member profile URL in Connections. In Scanner, paste profile text that the signed-in user can view; LIpstick stores that source snapshot locally and scans parsed name/headline/About/Experience/Education/Featured/Recommendations/Skills. Paste a refreshed snapshot after profile edits, then scan again.
-- LinkedIn prohibits automated profile scraping; do not implement browser session extraction or a profile fetcher from the URL. LinkedIn full-profile API access is not available to ordinary apps. Recommendations are copied/applied manually; never report an unperformed LinkedIn write as successful.
-- Implemented in this worktree: `BrowserLinkedInProfileClient` is registered in DI, developer credential inputs are removed, profile URL/snapshot flow is connected to Connections/Scanner, unsupported profile writes return manual instructions, and obsolete stored LinkedIn OAuth secrets are cleared when Connections initializes.
-- Updated SPEC, README, UI wireframes, API contracts, decisions, test plan, and GitHub issues #2/#4/#7. Project #2/#4/#7 are In progress. The branch still needs a final build/test check and commit/push if requested.
-- Latest check before final secret cleanup: solution build succeeded (238 warnings, 0 errors); profile snapshot tests passed 2/2. Re-run build and focused snapshot tests after the last code edit.
+### Superseded LinkedIn product-flow note
+- The earlier snapshot-only/no-fetch decision was replaced by the user instruction to fetch one public profile URL during each explicit scan. The latest behavior and limits are documented below.
+
+### LinkedIn public-page scan decision — 2026-11-21 (supersedes prior snapshot-only implementation note)
+- User chose one-profile public-page fetching. Each explicit Scan makes one unauthenticated HTTP GET to the saved LinkedIn member URL; no browser cookies, passwords, bulk collection, CAPTCHA bypass, or sign-in-wall bypass.
+- Parser extracts what public HTML/metadata exposes; LinkedIn may return partial content or block direct requests. In that case scan the cached user snapshot or prompt for pasted profile text.
+- Login button still opens default browser. The browser remembers its own login; LIpstick does not use it for requests.
+- Code updated in `BrowserLinkedInProfileClient` for HTTP fetch, same-domain HTTPS redirect handling, no cookie container, public HTML parsing, cache/fallback, and scan-source status. Added HTML parser fixture coverage. Docs/issue #4 updated to the public-scan decision.
+- Verification: solution build passed (164 warnings, 0 errors); focused LinkedInProfileSnapshotTests passed 4/4; git diff --check passed. The provided public profile URL returned HTTP 200 to a single cookie-free request. Next: review and push this implementation checkpoint.

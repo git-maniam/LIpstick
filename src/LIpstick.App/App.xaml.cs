@@ -33,7 +33,7 @@ public partial class App : Application
         // Infrastructure
         services.AddSingleton<ISecureStorageService, DpapiSecureStorageService>();
         services.AddSingleton<ILocalDataService, LocalDataService>();
-        services.AddSingleton<ILinkedInClient, BrowserLinkedInProfileClient>();
+        services.AddSingleton<ILinkedInClient>(sp => new BrowserLinkedInProfileClient(sp.GetRequiredService<ILocalDataService>()));
         services.AddSingleton<ILinkedInSyncWorker, LinkedInSyncWorker>();
 
         // AI Providers & Hub

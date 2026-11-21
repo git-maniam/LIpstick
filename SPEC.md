@@ -12,7 +12,7 @@
 
 ## 1. Product Vision & Architecture Overview
 
-**LIpstick** is a modern Windows desktop application built with .NET 10 (C#) and WinUI 3 / Windows App SDK that helps people improve a LinkedIn profile using multi-provider generative AI (Google Gemini & OpenAI). Users open LinkedIn in their default browser, save their profile URL, provide a profile text snapshot for local scanning, review recommendations, and manually apply any changes on LinkedIn.
+**LIpstick** is a modern Windows desktop application built with .NET 10 (C#) and WinUI 3 / Windows App SDK that helps people improve a LinkedIn profile using multi-provider generative AI (Google Gemini & OpenAI). Users open LinkedIn in their default browser, save a public profile URL, scan the publicly returned content, review recommendations, and manually apply any changes on LinkedIn. Pasted profile text is available when public content is blocked or incomplete.
 
 Just like lipstick adds polish and confidence, **LIpstick** polishes and beautifies your professional presence on LinkedIn while stripping away machine fingerprints and AI slop.
 
@@ -35,7 +35,7 @@ flowchart TD
 
     subgraph CoreEngine ["AI & Humanizer Processing Pipeline (C# .NET 10)"]
         LLMSelect["Model Selector (Gemini / OpenAI)"]
-        SnapshotParser["User-provided profile snapshot parser"]
+        SnapshotParser["Public page fetch + pasted-text fallback"]
         Rubric["100-Point Scoring Engine"]
         Humanizer["li-human (Invisible Unicode + Typo + Lexicon Scrubbing)"]
         Detector["5-Check Heuristic Panel (PASS >= 70)"]
@@ -92,9 +92,9 @@ The sidebar includes the persistent LinkedIn, OpenAI, and Gemini login/status co
 ### 3.1. LinkedIn Account Connection
 - **Login:** The “Open LinkedIn Login” action opens `https://www.linkedin.com/login` in the operating system's default browser. The browser may remember the user's sign-in. LIpstick does not collect LinkedIn passwords, cookies, or browser tokens; it does not claim to verify the browser login.
 - **Profile URL:** Save and persist a validated member URL such as `https://www.linkedin.com/in/rsmaniam/` in local app configuration.
-- **Profile snapshot and scan:** The user copies the visible profile text after signing in and pastes it in Scanner. LIpstick stores the snapshot locally and parses available name, headline, About, Experience, and Skills sections. Pasting a refreshed snapshot then selecting Scan evaluates the new version. No LinkedIn page scraping or hidden browser-session access is performed.
+- **Public profile scan:** The user saves a public member URL. Each manual Scan makes one unauthenticated HTTP request to that URL and parses whatever profile text and metadata the public page returns. No browser cookies, credentials, or bulk requests are used. The app stores the latest parsed snapshot locally. If LinkedIn blocks the request or returns incomplete content, the user can paste visible profile text in Scanner.
 - **Profile changes:** Recommendations are reviewed and manually copied/applied by the user on LinkedIn. LIpstick does not write profile changes through the LinkedIn API.
-- **Privacy:** User-provided profile text is personal data. Store locally, disclose when sending selected text to an AI provider, and remove it when the user clears local data.
+- **Privacy:** Public profile text and user-provided fallback text are personal data. Store locally, disclose when sending selected text to an AI provider, and remove it when the user clears local data.
 
 ### 3.2. AI Provider Management (Google Gemini & OpenAI)
 - **Multi-Provider Account Hub:**
@@ -114,8 +114,8 @@ The sidebar includes the persistent LinkedIn, OpenAI, and Gemini login/status co
 ## 4. End-to-End Workflow Specification
 
 ### Step 1: Scan & Rubric Evaluation
-1. User opens LinkedIn in the default browser, saves their member profile URL in Connections, then pastes the visible profile text into Scanner.
-2. LIpstick parses and saves that user-provided snapshot locally, then evaluates it against the **12-part, 100-point rubric**. After edits on LinkedIn, the user pastes a refreshed snapshot and scans again:
+1. User opens LinkedIn in the default browser, saves their public member profile URL in Connections, and clicks Scan Profile.
+2. LIpstick fetches the public page once without browser credentials, parses available profile content, and evaluates it against the **12-part, 100-point rubric**. After edits on LinkedIn, the user scans again; pasted profile text can be selected when the public page is incomplete or blocked:
    - *Headline* (12 pts)
    - *About: First 2 Lines* (10 pts)
    - *About: Body & Proof* (10 pts)
@@ -182,7 +182,7 @@ The user is automatically transitioned to the **Recommendations** tab featuring 
 - **Application Icon:** `LIpstick-Logo.png`
 - **UI Architecture:** MVVM (CommunityToolkit.Mvvm).
 - **Styling:** Native Windows 11 Fluent Design System, Mica backdrop, Windows 11 native Light/Dark themes.
-- **LinkedIn access:** System default browser for login and user-pasted profile snapshots for local scanning. No embedded login, session extraction, scraping, or API write-back.
+- **LinkedIn access:** System default browser for login; one unauthenticated fetch of the saved public profile URL per explicit scan, with pasted-text fallback. No browser-session extraction or API write-back.
 - **HTTP & Resilience:** `HttpClientFactory` with Polly for exponential backoff and rate-limit handling.
 - **AI Integration:** Official .NET SDKs (`Google.GenAI` / `OpenAI`).
 
@@ -222,7 +222,7 @@ For every case record the commit/build, OS version, fixture or fake version, tim
   - Configure Fluent Mica backdrop with Light (default) and Dark theme switching.
   - Implement collapsible `NavigationView` (`Connections`, `Scanner`, `Recommendations`, `History`).
 - [ ] **Phase 2: Authentication Handlers**
-  - Open LinkedIn sign-in in the default browser; save the user's profile URL and local profile snapshot. Never store LinkedIn passwords or scrape browser sessions.
+  - Open LinkedIn sign-in in the default browser; save the user's public profile URL and latest local scan snapshot. Never store LinkedIn passwords or read browser sessions.
   - Implement Google Gemini API handler via Google SDK.
   - Implement OpenAI API handler via OpenAI .NET SDK.
   - Build Model Selector dropdown in the custom title bar.
@@ -235,13 +235,13 @@ For every case record the commit/build, OS version, fixture or fake version, tim
   - Build split-view comparison UI with live diff formatting and real-time scorecards.
 - [ ] **Phase 5: Apply & Live Synchronization**
   - Provide reviewed recommendations for user-controlled manual edits; no unsupported LinkedIn profile writes.
-  - Keep a local version history of scans and recommendations; refresh by importing a new user-provided profile snapshot.
+  - Keep a local version history of scans and recommendations; refresh from the public page on each scan, with user-provided text as fallback.
   - Add confirmation dialogs and safety threshold gates to recommendation review.
 
 ### 2.0.2. Sidebar Account Login and Status
-The left navigation sidebar must include persistent account controls for LinkedIn, OpenAI, and Gemini. The LinkedIn action opens the login page in the default browser. Show profile setup state based on whether a valid profile URL and local snapshot exist; do not imply that LIpstick can verify browser sign-in. The browser manages and may remember LinkedIn credentials; LIpstick must never request or store them. These controls appear consistently on Scanner and Improve and remain accessible when the sidebar is collapsed.
+The left navigation sidebar must include persistent account controls for LinkedIn, OpenAI, and Gemini. The LinkedIn action opens the login page in the default browser. Show profile setup state based on whether a valid public profile URL is saved; do not imply that LIpstick can verify browser sign-in. The browser manages and may remember LinkedIn credentials; LIpstick must never request or store them. These controls appear consistently on Scanner and Improve and remain accessible when the sidebar is collapsed.
 
-LinkedIn profile setup is independent from AI-provider status. Scanner and Improve use the locally stored user-provided profile snapshot; they never scrape LinkedIn or read browser cookies. Profile edits are manual in LinkedIn, followed by pasting a fresh snapshot and scanning again. The model dropdown lists models only from connected AI providers; if neither OpenAI nor Gemini is connected, show an empty disabled selector with a prompt to connect at least one provider. Provider credentials are protected and never stored in ordinary preferences.
+LinkedIn profile setup is independent from AI-provider status. Scanner requests the saved public profile URL once per manual scan without browser cookies; it falls back to local pasted text if the request fails. Profile edits are manual in LinkedIn; scanning again requests the page again. The model dropdown lists models only from connected AI providers; if neither OpenAI nor Gemini is connected, show an empty disabled selector with a prompt to connect at least one provider. Provider credentials are protected and never stored in ordinary preferences.
 
 ### 2.0.3. Approved Supporting Screen Wireframes
 Use [`Connections-Content-History-Settings.png`](Connections-Content-History-Settings.png) as the visual reference for Connections, Content Lab, History, and Settings. Keep the established pastel palette, persistent account statuses, compact navigation, clear hierarchy, and generous spacing from Scanner and Improve. Connections shows separate provider cards and the requirement to connect at least one AI provider for model choices. Content Lab presents skill selection, drafting controls, and a visible notice that content is not sent or published automatically. History provides filters, change summaries, scores/status, and confirmed restore. Settings groups appearance, AI defaults, local data/privacy, export, and confirmed deletion. Treat example identities, content, values, and records as illustrative; runtime state and this specification govern actual behavior. Maintain responsive layouts and accessible control labels/statuses.
@@ -249,5 +249,5 @@ Use [`Connections-Content-History-Settings.png`](Connections-Content-History-Set
 ### Implementation checkpoint — 2026-11-21
 - Content Lab now routes all 11 skill selections through their matching service operation, with per-skill inputs, draft retention while switching tools, and a visible result/status area. Outputs are local drafts; the app does not publish or send them.
 - Content Lab generation remains under implementation review. Verify each workflow against its skill contract, especially fabricated-data safeguards and generated-output quality, before closing Phase 6.
-- LinkedIn's ordinary-user flow uses the default browser, a saved profile URL, and a user-provided local snapshot. No developer app, API scraping, browser-session access, or profile write API is required. Provider live validation still needs user credentials.
+- LinkedIn's ordinary-user flow uses the default browser, a saved public profile URL, and a single unauthenticated fetch per manual scan; local pasted text is the fallback. No developer app, browser-session access, or profile write API is required. Provider live validation still needs user credentials.
 - UI wireframe fidelity gaps are tracked in GitHub issues #12–#14 and remain backlog work.

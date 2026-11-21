@@ -49,8 +49,8 @@ This repository contains the complete specification, data dictionaries, heuristi
    - Dynamic Model Selector dropdown in the modern custom title bar.
 3. **LinkedIn Session & Profile Scan:**
    - Open LinkedIn login in the default browser; the browser remembers sign-in when the user chooses. LIpstick never receives or stores a LinkedIn password, cookie, or browser token.
-   - Save a profile URL such as `https://www.linkedin.com/in/rsmaniam/`, then paste the visible profile text into Scanner. LIpstick saves and scans that local snapshot; paste an updated copy before rescanning.
-   - LIpstick does not scrape LinkedIn pages or access the browser's signed-in session. LinkedIn's terms prohibit automated scraping, and full profile API access is not available to ordinary third-party apps.
+   - Save a public profile URL such as `https://www.linkedin.com/in/rsmaniam/`. Each manual scan makes one unauthenticated request to that page and parses the public content it returns; it never uses browser cookies or login credentials.
+   - If LinkedIn blocks direct access or returns incomplete content, paste the visible profile text as a local fallback. A scan after a profile edit makes a fresh request.
 4. **Side-by-Side Recommendations & Real-Time C# Humanizer:**
    - Side-by-side diff comparison between current profile and AI rewrite.
    - Real-time scoring and cleaning engine (invisible Unicode removal, typographic normalization, slop scrub) ensuring high human score ($\text{PASS} \ge 70$).
@@ -68,7 +68,7 @@ This repository contains the complete specification, data dictionaries, heuristi
 
 ### LinkedIn profile setup
 
-Choose **Open LinkedIn Login** to sign in through your default browser, then save your LinkedIn profile URL in Connections. The browser manages saved credentials. Copy your visible profile text and paste it into Scanner before scanning; paste a fresh copy after profile edits. A LinkedIn developer app is not required. LinkedIn's terms prohibit automated profile scraping, so LIpstick does not read browser cookies or fetch profile pages itself.
+Choose **Open LinkedIn Login** to sign in through your default browser, then save a public profile URL in Connections. The browser manages saved credentials; LIpstick does not access that session. Scanner fetches the saved public page once per manual scan without authentication. If the page blocks access or omits sections, paste visible profile text as a fallback. A LinkedIn developer app is not required.
 
 ## Dependency-first implementation plan
 
