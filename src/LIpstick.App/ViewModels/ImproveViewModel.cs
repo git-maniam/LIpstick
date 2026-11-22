@@ -10,7 +10,6 @@ public partial class ImproveViewModel : ObservableObject
 {
     private readonly ILinkedInClient _linkedInClient;
     private readonly IHumanizerEngine _humanizer;
-    private readonly ILinkedInSyncWorker _syncWorker;
     private readonly ILocalDataService _dataService;
     private readonly IAIHubService? _aiHub;
 
@@ -64,13 +63,11 @@ public partial class ImproveViewModel : ObservableObject
     public ImproveViewModel(
         ILinkedInClient linkedInClient,
         IHumanizerEngine humanizer,
-        ILinkedInSyncWorker syncWorker,
         ILocalDataService dataService,
         IAIHubService? aiHub = null)
     {
         _linkedInClient = linkedInClient;
         _humanizer = humanizer;
-        _syncWorker = syncWorker;
         _dataService = dataService;
         _aiHub = aiHub;
     }
@@ -100,25 +97,25 @@ public partial class ImproveViewModel : ObservableObject
         }
 
         var profile = await _linkedInClient.IngestProfileAsync();
-        StatusMessage = string.Empty;
+        var config = await _dataService.LoadConfigAsync();
 
         switch (section.ToLowerInvariant())
         {
             case "headline":
                 AsIsText = profile.Headline;
-                ToBeText = string.Empty;
+                ToBeText = config.LinkedInSuggestions.GetValueOrDefault("Headline", string.Empty);
                 break;
             case "about":
                 AsIsText = profile.About;
-                ToBeText = string.Empty;
+                ToBeText = config.LinkedInSuggestions.GetValueOrDefault("About", string.Empty);
                 break;
             case "experience":
                 AsIsText = profile.Experiences.Count > 0 ? $"{profile.Experiences[0].Title} — {profile.Experiences[0].Company}\n{profile.Experiences[0].Description}" : string.Empty;
-                ToBeText = string.Empty;
+                ToBeText = config.LinkedInSuggestions.GetValueOrDefault("Experience", string.Empty);
                 break;
             case "featured":
                 AsIsText = string.Join("\n\n", profile.FeaturedItems.Select(item => $"{item.Title}\n{item.Description}"));
-                ToBeText = string.Empty;
+                ToBeText = config.LinkedInSuggestions.GetValueOrDefault("Featured", string.Empty);
                 break;
             default:
                 AsIsText = string.Empty;
@@ -127,6 +124,17 @@ public partial class ImproveViewModel : ObservableObject
         }
 
         UpdateScoreAndDiff();
+        if (string.IsNullOrWhiteSpace(ToBeText))
+        {
+            if (string.IsNullOrWhiteSpace(AsIsText))
+                StatusMessage = $"The latest scan contains no readable {section} content to improve. Check the profile and PDF, then scan again.";
+            else if (_aiHub is null)
+                StatusMessage = "Connect an AI provider to generate a profile suggestion.";
+            else
+                await ReGenerateAsync();
+        }
+        else
+            StatusMessage = "Saved suggestion loaded. Edit it, regenerate it, or copy it to LinkedIn manually.";
     }
 
     partial void OnToBeTextChanged(string value)
@@ -150,31 +158,8 @@ public partial class ImproveViewModel : ObservableObject
         DiffChunks = DiffEngine.ComputeWordDiff(AsIsText, ToBeText).ToList();
     }
 
-    [RelayCommand]
-    public async Task ApplyAsync()
-    {
-        StatusMessage = "Applying changes to profile...";
-        var result = SelectedSection.ToLowerInvariant() switch
-        {
-            "headline" => await _syncWorker.UpdateHeadlineAsync(ToBeText),
-            "about" => await _syncWorker.UpdateAboutAsync(ToBeText),
-            "featured" => new UpdateResult(SelectedSection, UpdateOutcome.Unsupported, "Featured section updates are not supported by the current LinkedIn permissions.", DateTime.UtcNow, false),
-            _ => await _syncWorker.UpdateHeadlineAsync(ToBeText)
-        };
-
-        if (result.Outcome == UpdateOutcome.Succeeded)
-        {
-            StatusMessage = $"✓ {SelectedSection} successfully updated on LinkedIn! Backed up to History.";
-        }
-        else if (result.Outcome == UpdateOutcome.Unsupported)
-        {
-            StatusMessage = result.Message ?? "Copy the reviewed text into LinkedIn manually, then scan an updated profile snapshot.";
-        }
-        else
-        {
-            StatusMessage = $"✗ Apply failed: {result.Message}";
-        }
-    }
+    public void NotifySuggestionCopied() =>
+        StatusMessage = $"{SelectedSection} suggestion copied. Apply it manually in LinkedIn, then return to Scanner and select Re-scan.";
 
     [RelayCommand]
     public void CleanAndHumanize()
@@ -187,17 +172,23 @@ public partial class ImproveViewModel : ObservableObject
     [RelayCommand]
     public async Task ReGenerateAsync()
     {
+        if (string.IsNullOrWhiteSpace(AsIsText))
+        {
+            StatusMessage = $"The latest scan contains no readable {SelectedSection} content to improve.";
+            return;
+        }
+
         StatusMessage = "Re-generating recommendation with AI...";
         try
         {
             if (_aiHub != null)
             {
                 var config = await _dataService.LoadConfigAsync();
-                string model = config.SelectedModel ?? "gemini-2.0-flash";
+                string model = config.SelectedModel ?? "gemini-flash-latest";
                 var req = new RecommendationRequest(
                     SelectedSection,
                     AsIsText,
-                    "Direct, outcome-driven, professional, human",
+                    "Direct, outcome-driven, professional, human. Preserve facts and claims from the source. Never invent employers, dates, metrics, credentials, or achievements.",
                     new Dictionary<string, object>(),
                     model);
 
@@ -207,13 +198,17 @@ public partial class ImproveViewModel : ObservableObject
                 if (!string.IsNullOrWhiteSpace(generated))
                 {
                     ToBeText = generated.Trim();
-                    StatusMessage = "✓ Recommendation updated with fresh AI draft.";
+                    var suggestions = new Dictionary<string, string>(config.LinkedInSuggestions, StringComparer.OrdinalIgnoreCase)
+                    {
+                        [SelectedSection] = ToBeText
+                    };
+                    await _dataService.SaveConfigAsync(config with { LinkedInSuggestions = suggestions });
+                    StatusMessage = "AI suggestion generated. Review it, then copy and apply it manually in LinkedIn.";
                 }
             }
             else
             {
-                CleanAndHumanize();
-                StatusMessage = "✓ Applied humanizer clean and de-slop.";
+                StatusMessage = "Connect an AI provider to generate a profile suggestion.";
             }
         }
         catch (Exception ex)

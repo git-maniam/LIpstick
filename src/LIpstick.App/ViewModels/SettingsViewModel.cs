@@ -26,10 +26,10 @@ public partial class SettingsViewModel : ObservableObject
     private string _geminiCustomBaseUrl = "";
 
     [ObservableProperty]
-    private string _openAiCustomBaseUrl = "";
+    private string _openAiCustomBaseUrl = "https://api.openai.com/v1";
 
     [ObservableProperty]
-    private string _selectedModel = "gemini-2.0-flash";
+    private string _selectedModel = "gemini-flash-latest";
 
     public IReadOnlyList<ModelInfo> AvailableModels => _shellViewModel.AvailableModels;
 
@@ -56,7 +56,7 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         GeminiCustomBaseUrl = config.GeminiCustomBaseUrl ?? "";
-        OpenAiCustomBaseUrl = config.OpenAiCustomBaseUrl ?? "";
+        OpenAiCustomBaseUrl = config.OpenAiCustomBaseUrl ?? "https://api.openai.com/v1";
         if (_geminiProvider != null)
         {
             _geminiProvider.CustomBaseUrl = config.GeminiCustomBaseUrl;

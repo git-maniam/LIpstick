@@ -33,7 +33,7 @@ See [`../Connections-Content-History-Settings.png`](../Connections-Content-Histo
 - Confirm destructive data deletion and explain what will be removed.
 
 ### Persistent Sidebar Account Controls
-Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemini. LinkedIn opens the default browser login page and shows profile-setup status; the browser manages any remembered login. Scanner makes one unauthenticated request to the saved public profile URL per explicit scan, with pasted text as fallback. LIpstick does not use browser cookies or apply edits. The model selector lists models only for connected AI providers.
+Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemini. LinkedIn login opens the default browser as a convenience only. Connections contains a public profile URL field with adjacent **CHECK** button, LinkedIn desktop **Save to PDF** guidance, and a local PDF chooser. The first scan combines the checked public page and PDF. **Re-scan** fetches fresh public page content only and compares it with the first scan baseline. LIpstick does not access browser cookies or apply edits. The model selector lists models only for connected AI providers.
 
 ### 1. Navigation Shell
 ```text
@@ -53,7 +53,7 @@ Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemi
 
 ### 2. Connect Tab (`/connect`)
 - Three cards:
-  1. **LinkedIn Profile Setup Card**: Default-browser login action, saved public profile URL field, and explanation that Scanner fetches public page content with pasted-text fallback.
+  1. **LinkedIn Profile Setup Card**: Default-browser login shortcut, public profile URL field with adjacent **CHECK** button, Save to PDF instructions, and local PDF chooser for the initial scan.
   2. **Google Gemini Connection Card**: Sign-in with Google or API Key input, displays account quota and available models (`Gemini 2.5 Flash`, `Gemini 2.0 Flash`, `Gemini 1.5 Pro`).
   3. **OpenAI Connection Card**: API Key input, model list (`GPT-4o`, `o3-mini`).
 
@@ -64,5 +64,5 @@ Every screen includes persistent sidebar controls for LinkedIn, OpenAI, and Gemi
 
 ### 4. Side-by-Side Diff Tab (`/diff`)
 - Sub-navigation pills: `Headline`, `About Section`, `Experience Entries`, `Featured Items`.
-- Left pane: Read-only live LinkedIn content with flagged issues.
-- Right pane: Editable recommended rewrite with live Humanizer score pill (`88 PASS`), heuristic metric breakdown, and **[ APPLY TO LINKEDIN ]** action button.
+- Left pane: Read-only content from the latest scan with flagged issues.
+- Right pane: Editable AI recommendation with live Humanizer score pill (`88 PASS`), heuristic metric breakdown, and **[ COPY ]** action. User applies changes manually in LinkedIn, then returns to Scanner and selects **Re-scan**.

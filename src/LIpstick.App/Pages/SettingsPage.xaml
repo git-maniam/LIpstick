@@ -46,8 +46,8 @@
                         <Expander Header="Custom provider endpoints" IsExpanded="False">
                             <Grid ColumnSpacing="10" Padding="0,8,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <TextBox Header="Gemini base URL" PlaceholderText="https://generativelanguage.googleapis.com" Text="{x:Bind ViewModel.GeminiCustomBaseUrl, Mode=TwoWay}" />
-                                <TextBox Grid.Column="1" Header="OpenAI base URL" PlaceholderText="https://api.openai.com/v1" Text="{x:Bind ViewModel.OpenAiCustomBaseUrl, Mode=TwoWay}" />
+                                <TextBox Header="Gemini API endpoint URL" PlaceholderText="https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" Text="{x:Bind ViewModel.GeminiCustomBaseUrl, Mode=TwoWay}" />
+                                <TextBox Grid.Column="1" Header="OpenAI API Endpoint URL" PlaceholderText="https://api.openai.com/v1" Text="{x:Bind ViewModel.OpenAiCustomBaseUrl, Mode=TwoWay}" />
                                 <Button Grid.Column="2" Content="Save endpoints" Command="{x:Bind ViewModel.SaveEndpointsCommand}" VerticalAlignment="Bottom" />
                             </Grid>
                         </Expander>
@@ -63,7 +63,7 @@
                         <StackPanel Spacing="3"><TextBlock Text="Privacy &amp; data" FontSize="15" FontWeight="SemiBold" Foreground="#17284D" /><TextBlock Text="Your credentials and work stay on this device." FontSize="11" Foreground="#667796" /></StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                        <TextBlock Text="Provider keys are protected with Windows DPAPI. Your LinkedIn profile URL, pasted profile snapshot, and drafts are stored locally. LIpstick never stores LinkedIn passwords or browser sessions." FontSize="12" Foreground="#53678E" TextWrapping="Wrap" />
+                        <TextBlock Text="Provider keys are protected with Windows DPAPI. Your LinkedIn profile URL, imported Save to PDF text, public scan snapshots, suggestions, and drafts are stored locally. LIpstick never stores LinkedIn passwords or browser sessions." FontSize="12" Foreground="#53678E" TextWrapping="Wrap" />
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <TextBlock Text="Local data location" FontSize="11" Foreground="#667796" VerticalAlignment="Center" />

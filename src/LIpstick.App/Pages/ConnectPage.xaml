@@ -53,14 +53,30 @@
                             </Border>
                             <Button Content="Open LinkedIn Login" Command="{x:Bind ViewModel.ToggleLinkedInConnectionCommand}" MinWidth="150" />
                         </StackPanel>
-                        <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox Header="Your LinkedIn profile URL" PlaceholderText="https://www.linkedin.com/in/your-name/" Text="{x:Bind ViewModel.LinkedInProfileUrl, Mode=TwoWay}" />
-                            <Button Grid.Column="1" Content="Save Profile URL" Command="{x:Bind ViewModel.SaveLinkedInProfileUrlCommand}" VerticalAlignment="Bottom" />
-                        </Grid>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Spacing="12">
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Header="Public LinkedIn profile URL" PlaceholderText="https://www.linkedin.com/in/your-name/" Text="{x:Bind ViewModel.LinkedInProfileUrl, Mode=TwoWay}" />
+                                <Button Grid.Column="1" Content="CHECK" Command="{x:Bind ViewModel.CheckLinkedInProfileCommand}" AutomationProperties.Name="Check LinkedIn public profile accessibility" VerticalAlignment="Bottom" MinWidth="92" />
+                            </Grid>
+                            <Border Background="#F3F6FD" CornerRadius="10" Padding="14,12">
+                                <Grid ColumnSpacing="12" RowSpacing="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Add your LinkedIn profile PDF" FontWeight="SemiBold" Foreground="#17284D" />
+                                        <TextBlock Text="On LinkedIn desktop: Me → View Profile → More or Resources → Save to PDF. Choose the PDF here. This is required for your first scan." TextWrapping="Wrap" FontSize="12" Foreground="#53678E" />
+                                        <TextBlock Text="{x:Bind ViewModel.LinkedInPdfStatus, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" Foreground="#2874E8" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Choose PDF…" Click="ChooseLinkedInPdf_Click" VerticalAlignment="Center" MinWidth="112" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Grid>
                 </Border>
 

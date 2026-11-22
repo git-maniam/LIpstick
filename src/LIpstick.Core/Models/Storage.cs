@@ -6,11 +6,20 @@ public record AppConfig
 {
     public string Theme { get; init; } = "Light"; // Light, Dark, System
     public string? SelectedProvider { get; init; } = "Google Gemini";
-    public string? SelectedModel { get; init; } = "gemini-2.0-flash";
+    public string? SelectedModel { get; init; } = "gemini-flash-latest";
     public string? GeminiCustomBaseUrl { get; init; }
-    public string? OpenAiCustomBaseUrl { get; init; }
+    public string? OpenAiCustomBaseUrl { get; init; } = "https://api.openai.com/v1";
     public string? LinkedInProfileUrl { get; init; }
     public string? LinkedInProfileText { get; init; }
+    public string? LinkedInPdfPath { get; init; }
+    public string? LinkedInPdfText { get; init; }
+    public string? LinkedInVerifiedProfileUrl { get; init; }
+    public LinkedInProfile? LinkedInInitialProfile { get; init; }
+    public LinkedInProfile? LinkedInLatestProfile { get; init; }
+    public Dictionary<string, string> LinkedInSuggestions { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    public int? LinkedInInitialScore { get; init; }
+    public int? LinkedInLastScanScore { get; init; }
+    public DateTime? LinkedInLastScannedUtc { get; init; }
     public bool TelemetryEnabled { get; init; } = false;
     public string DataDirectory { get; init; } = "";
     public DateTime LastUpdated { get; init; } = DateTime.UtcNow;

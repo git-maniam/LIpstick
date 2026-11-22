@@ -105,7 +105,7 @@
                     </Grid>
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Content="Regenerate" Command="{x:Bind ViewModel.ReGenerateCommand}" />
-                        <Button Content="Apply this section" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.ApplyCommand}" IsEnabled="{x:Bind ViewModel.IsPass, Mode=OneWay}" />
+                        <Button Content="Copy suggestion" Style="{ThemeResource AccentButtonStyle}" Click="CopySuggestion_Click" IsEnabled="{x:Bind ViewModel.IsPass, Mode=OneWay}" />
                     </StackPanel>
                 </Grid>
             </Border>

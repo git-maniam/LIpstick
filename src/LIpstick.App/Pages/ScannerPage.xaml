@@ -23,19 +23,10 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsScanning, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsScanning, Mode=OneWay}" Foreground="White" />
                         <FontIcon Glyph="&#xE72C;" FontSize="15" Visibility="{x:Bind ViewModel.IsScanning, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
-                        <TextBlock Text="Scan profile" FontWeight="SemiBold" />
+                        <TextBlock Text="{x:Bind ViewModel.ScanButtonLabel, Mode=OneWay}" FontWeight="SemiBold" />
                     </StackPanel>
                 </Button>
             </Grid>
-
-            <Border Background="#E5EEFF" BorderBrush="#CCDDFE" BorderThickness="1" CornerRadius="12" Padding="16">
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Profile snapshot" FontSize="16" FontWeight="SemiBold" Foreground="#14264F" />
-                    <TextBlock Text="Scan fetches your saved public profile URL. If LinkedIn blocks the request or the public page omits sections, copy the visible profile text here and select pasted-snapshot scan. The latest snapshot is stored locally; public scan retries the URL each time." TextWrapping="Wrap" FontSize="13" Foreground="#30466D" />
-                    <CheckBox Content="Scan pasted profile text instead of fetching the public page" IsChecked="{x:Bind ViewModel.UsePastedSnapshot, Mode=TwoWay}" />
-                    <TextBox Header="Profile text" PlaceholderText="Paste the visible profile text here, including About, Experience, Education, and Skills sections" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="130" MaxHeight="220" ScrollViewer.VerticalScrollBarVisibility="Auto" Text="{x:Bind ViewModel.ProfileTextInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-            </Border>
 
             <Border Background="White" BorderBrush="#D9E3F4" BorderThickness="1" CornerRadius="16" Padding="24">
                 <Grid ColumnSpacing="28">
@@ -55,6 +46,7 @@
                         </Border>
                         <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontSize="15" Foreground="#30466D" TextWrapping="Wrap" />
                         <TextBlock Text="{x:Bind ViewModel.ProfileHeadline, Mode=OneWay}" FontSize="14" Foreground="#53678E" TextWrapping="Wrap" />
+                        <TextBlock Text="{x:Bind ViewModel.ScoreComparison, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2874E8" TextWrapping="Wrap" />
                     </StackPanel>
                 </Grid>
             </Border>

@@ -1,9 +1,9 @@
 # RESTART BOOKMARK: Project LIpstick
-**Generated At:** 2026-11-21T16:27:30+05:30  
-**Machine State:** Preparing for PC Reboot  
-**Git Branch:** `main` (cleanly committed and pushed)  
-**Latest Milestone Landed:** Milestone 1 (Shell, Navigation & Clean Compilation - commit `9d0fb89f`)  
-**Active Milestone in Flight:** Milestone 2 (Authentication, LinkedIn Session & AI Provider Hub)
+**Generated At:** 2026-11-21 (Asia/Calcutta)
+**Machine State:** Active implementation; worktree has uncommitted changes
+**Git Branch:** `main`
+**Latest Milestone Landed:** See git history; this bookmark records later LinkedIn flow work in progress
+**Active Milestone in Flight:** LinkedIn setup and public profile scan (GitHub issues #2 and #4)
 
 ---
 
@@ -29,9 +29,9 @@ All initial groundwork, core architecture, and foundation milestones have succes
 | **#11** | M0: Verify platform and provider capabilities | **CLOSED** | Decisions documented in `architecture/decisions.md` |
 | **#1** | Phase 1: Build .NET 10 WinUI 3 Fluent application shell | **COMPLETE** | Solution compiles with 0 errors/warnings; commit `9d0fb89f` pushed |
 | **#9** | Cross-cutting: Configuration, theme, privacy, storage & bookmarks | **COMPLETE** | DPAPI storage, atomic writes, corrupt recovery (ST-01), clear data (ST-02), session bookmark (ST-03) |
-| **#2** | Phase 2: LinkedIn OAuth, WebView2 session, credential protection | **IN PROGRESS** | Session info DTOs, mock client, sync worker landed; WebView2 live handshake wired |
+| **#2** | Phase 2: Browser login shortcut, public URL check, and PDF setup | **IN PROGRESS** | Default-browser login; URL + CHECK; local LinkedIn Save to PDF import |
 | **#3** | Phase 2: Gemini & OpenAI provider adapters & model selector | **IN PROGRESS** | Provider adapters, error mapping, custom endpoint settings in SettingsPage landed |
-| **#4** | Phase 3: Profile ingest and 100-point rubric scanner | **READY FOR GATE** | 12 categories (12/10/10/8/6/14/10/8/8/6/4/4), radial gauge, fix-first list |
+| **#4** | Phase 3: Initial PDF + public scan and public re-scan | **IN PROGRESS** | Initial scan merges PDF and checked public page; re-scan refreshes public data and compares baseline |
 | **#5** | Phase 4: Port li-human cleaner and 5-check detector to C# | **VERIFIED** | CleanText + 5-check detector pass all test thresholds (overall >= 70, min >= 55) |
 | **#6** | Phase 4: Recommendations split view, diffing, live scorecard | **VERIFIED** | Side-by-side As-Is vs To-Be with live humanizer pill and metric progress bars |
 | **#7** | Phase 5: Safe LinkedIn apply, backup history, and rollback | **VERIFIED** | Threshold gate prevents apply on non-PASS; atomic backup to `history.json` |
@@ -128,3 +128,30 @@ Persistent app configuration and rollback artifacts are located under `%LocalApp
 - Login button still opens default browser. The browser remembers its own login; LIpstick does not use it for requests.
 - Code updated in `BrowserLinkedInProfileClient` for HTTP fetch, same-domain HTTPS redirect handling, no cookie container, public HTML parsing, cache/fallback, and scan-source status. Added HTML parser fixture coverage. Docs/issue #4 updated to the public-scan decision.
 - Verification: solution build passed (164 warnings, 0 errors); focused LinkedInProfileSnapshotTests passed 4/4; git diff --check passed. The provided public profile URL returned HTTP 200 to a single cookie-free request. Next: review and push this implementation checkpoint.
+
+### Current LinkedIn workflow implementation — 2026-11-21
+- User's current specification supersedes prior OAuth and pasted-snapshot workflows: Connections requires a public profile URL with adjacent **CHECK**, clear LinkedIn desktop **Save to PDF** instructions, and local PDF selection.
+- First scan requires a checked public URL and imported PDF, combines the public page and PDF, and stores the initial profile/score baseline. Later **Re-scan** fetches the public page again and compares it to baseline; it does not reuse PDF text.
+- Suggestions are generated in Improve when an AI provider is available, cached by section for the latest scan, and copied for the user to apply manually. LIpstick never writes LinkedIn profile changes.
+- GitHub Project #2 and #4 are **In progress** with updated descriptions and project README. Working tree includes UI, PDF importer, scan/re-scan state, tests, and spec/doc updates; verify/build and focused tests are the next actions.
+- Final verification: `dotnet build LIpstick.slnx --no-restore` succeeded (0 errors; 78 warnings); focused `LinkedInProfileSnapshotTests` passed 6/6, including PDF extraction and initial combined scan followed by fresh-public-only re-scan; `git diff --check` passed.
+- **Next:** Review the local diff with the user. GitHub issues #2/#4 and Project LIpstick README are updated; code/spec changes are local and uncommitted.
+
+### Gemini provider connection diagnosis — 2026-11-21
+- Used the supplied test key for a metadata-only Gemini models request (no content generation); Google accepted the key and returned `gemini-flash-latest` among available models. The key was not written to LIpstick storage.
+- Found app credential validation still targeted `gemini-2.0-flash`, while the provided endpoint/model is `gemini-flash-latest`. Updated Gemini validation and the fresh-install default to `gemini-flash-latest`, preserving older model options for existing configurations.
+- Latest verification after provider update: solution build succeeded (0 errors; 165 warnings); focused AI + LinkedIn tests passed 28/28. OpenAI live validation remains unverified because no OpenAI test key was supplied.
+- The one generation probe did not yield a captured result; do not retry with the supplied key unless the user explicitly asks. No Gemini key is stored in app configuration or secure storage.
+
+### Gemini endpoint and model-list fix — 2026-11-21
+- Screenshot showed the Settings value is the full REST operation URL, but LIpstick was passing it to Google GenAI as a base URL; the SDK then appended its own model path and failed with `NETWORK_ERROR`.
+- `GeminiProvider` now recognizes a full `/v1beta/models/{model}:generateContent` endpoint (and a version-only base path), extracts the host and API version, then lets the SDK form the request URL. The exact final request URL is covered by a mock-transport test.
+- Added the full endpoint as Settings placeholder. Successful key verification triggers a fresh Shell model-list load; Gemini options include `gemini-flash-latest`. The list was blank because failed verification discards the candidate key and leaves the provider disconnected.
+- Verification: solution build succeeded (0 errors); focused AI provider tests passed 23/23. Latest app relaunched at 2026-11-21 23:21 local time. Re-enter the API key and choose Save & Connect to verify the live flow; no key was persisted by this test session.
+
+### Follow-up Gemini network diagnostic — 2026-11-21
+- User reported `NETWORK_ERROR` again after endpoint normalization. A single tiny direct generation probe timed out with no HTTP response; TCP port 443 to Google resolves/connects. No retry was made to avoid quota use.
+- Credential/model metadata had succeeded earlier, so the current failure is likely in POST transport or endpoint handling rather than the key's validity; this is not yet proven for LIpstick's live request.
+- Updated Gemini exception mapping to classify timeouts and 404/invalid endpoints separately. Connections now shows a sanitized underlying diagnostic with the API key redacted.
+- Verification: solution build succeeded (0 errors; 243 warnings); focused AI adapter tests passed 23/23. Latest app relaunched at 2026-11-21 23:27 local time.
+- **Next:** User can retry once in Connections and share the new diagnostic text. Do not perform more live generation calls without direction; key is not saved by this test session.

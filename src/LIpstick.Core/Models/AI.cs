@@ -42,6 +42,7 @@ public static class AIErrorCodes
     public const string QuotaExceeded = "RESOURCE_EXHAUSTED";
     public const string Timeout = "TIMEOUT";
     public const string NetworkError = "NETWORK_ERROR";
+    public const string InvalidEndpoint = "ENDPOINT_INVALID";
     public const string MalformedResponse = "MALFORMED_RESPONSE";
 }
 

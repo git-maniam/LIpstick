@@ -274,6 +274,7 @@ What's your take on automated ops?";
             Assert.IsTrue(models.Count >= 3);
             Assert.IsTrue(gemini.IsConfigured);
             Assert.IsTrue(models.Any(m => m.Id == "gemini-2.5-flash"));
+            Assert.IsTrue(models.Any(m => m.Id == "gemini-flash-latest"));
         }
         finally
         {
@@ -439,6 +440,37 @@ What's your take on automated ops?";
         finally
         {
             try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [TestMethod]
+    public async Task GeminiProvider_AcceptsFullGenerateContentEndpointWithoutDuplicatingPath()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"gemini_endpoint_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var storage = new DpapiSecureStorageService(Path.Combine(directory, "vault.dat"));
+            await storage.StoreSecretAsync("GEMINI_API_KEY", "test-key");
+            var handler = new MockHttpMessageHandler
+            {
+                ResponseContent = """{"candidates":[{"content":{"parts":[{"text":"OK"}]}}]}"""
+            };
+            var provider = new GeminiProvider(storage, new HttpClient(handler))
+            {
+                CustomBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+            };
+
+            await provider.GenerateCompletionAsync(new RecommendationRequest(
+                "credential validation", "Reply OK", string.Empty, new Dictionary<string, object>(), "gemini-flash-latest"));
+
+            Assert.AreEqual(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
+                handler.LastRequest?.RequestUri?.ToString());
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
     }
 

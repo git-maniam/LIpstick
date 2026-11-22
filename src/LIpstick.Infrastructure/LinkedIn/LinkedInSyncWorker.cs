@@ -49,7 +49,7 @@ public class LinkedInSyncWorker : ILinkedInSyncWorker
     private static UpdateResult ManualOnly(string section) => new(
         section,
         UpdateOutcome.Unsupported,
-        "LIpstick cannot write profile changes to LinkedIn. Copy the reviewed text into LinkedIn yourself, then paste the updated profile snapshot and scan again.",
+        "LIpstick cannot write profile changes to LinkedIn. Copy the reviewed text into LinkedIn yourself, then return to Scanner and select Re-scan.",
         DateTime.UtcNow,
         false);
 

@@ -24,15 +24,17 @@ LIpstick bridges personal LinkedIn optimization with multi-provider generative A
 - **Target Architecture:** `win-x64` (primary), `win-arm64` supported.
 - **UI & Materials:** Fluent Design System, Mica backdrop with fallback to solid background on downlevel builds, Acrylic flyouts, 8–12px corner radii, Segoe UI Variable typography.
 
-### 2.2 LinkedIn Login, Profile Import & Policy
-- **Login:** Open LinkedIn login in the system default browser. The browser may remember the user's credentials. LIpstick never requests, stores, reads, or reuses LinkedIn passwords, cookies, or browser tokens.
-- **Profile access:** User saves a public LinkedIn profile URL. On each explicit Scan action, LIpstick makes one unauthenticated request to that page and parses the content returned. It uses no browser cookies, login credentials, or batch requests. If direct access is blocked or incomplete, the user can paste visible profile text as fallback.
-- **Limits:** Do not bypass sign-in walls, CAPTCHAs, rate limits, or other access controls. Public HTML may omit profile sections; full profile API access remains restricted to approved developers/partners.
-- **Updates:** Recommendations are manual. LIpstick never reports profile writes as successful or implies rollback on LinkedIn. Local history records only local snapshots/recommendations.
+### 2.2 LinkedIn Profile Setup, PDF Import & Public Scan
+- **Login shortcut:** Open LinkedIn login in the system default browser. This does not authenticate LIpstick or grant access to browser data. LIpstick never requests, stores, reads, or reuses LinkedIn passwords, cookies, or browser tokens.
+- **Setup:** Connections persists a public member URL and offers an adjacent **CHECK** action that makes one unauthenticated request and reports whether the page is readable. It also explains LinkedIn desktop's **Save to PDF** steps and imports the user's selected PDF locally.
+- **Initial scan:** Require a checked URL and imported PDF. Fetch the public page, combine the returned fields with PDF text, preserve provenance, and save the profile/score baseline.
+- **Re-scan:** After the user manually updates their LinkedIn profile, fetch the URL again and evaluate only fresh public-page content. Keep the original baseline for comparison; never reuse the initial PDF as current content.
+- **Limits:** Do not bypass sign-in walls, CAPTCHAs, rate limits, or other access controls. Public pages may omit sections; report inaccessible or missing fields clearly and do not invent data.
+- **Updates:** Recommendations are manual. LIpstick never writes profile changes or reports an unperformed write as successful. Local history records local snapshots/recommendations only.
 
 ### 2.3 AI Provider Architecture & Model Hub
 - **Authentication:** Direct API Key management backed by Windows Credential Locker / DPAPI.
-- **Google Gemini:** `Google.GenAI` SDK / REST client with support for `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`, `gemini-1.5-pro`.
+- **Google Gemini:** `Google.GenAI` SDK / REST client with `gemini-flash-latest` as the connection-validation/default model; also offer the configured Gemini Flash models when the account provides access.
 - **OpenAI:** `OpenAI` official .NET SDK with support for `gpt-4o`, `gpt-4o-mini`, `o3-mini`, `o1`.
 - **Resilience & Testing:** Deterministic `MockAIProvider` for all unit and integration test executions without leaking secrets or consuming live quotas.
 - **Safety & Untrusted Content:** Imported LinkedIn text and LLM responses are treated as untrusted; structured validation prevents prompt injection or automatic execution.
@@ -68,4 +70,4 @@ LIpstick bridges personal LinkedIn optimization with multi-provider generative A
 - **Pass Threshold:** Overall human score $\ge 70$ AND every individual check (Burstiness, Specificity, Slop Density, Fingerprint, Voice) $\ge 55$.
 - **Review:** Overall score between 50 and 69.
 - **Flagged:** Overall score $< 50$ or any metric $< 55$.
-- Apply to LinkedIn is disabled unless status is `PASS`.
+- The copy-suggestion action is available only when status is `PASS`; the user remains responsible for applying the copied text in LinkedIn.

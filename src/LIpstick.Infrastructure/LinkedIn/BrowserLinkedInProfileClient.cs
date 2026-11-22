@@ -44,19 +44,52 @@ public sealed class BrowserLinkedInProfileClient : ILinkedInClient
             configured ? LinkedInConnectionState.Connected : LinkedInConnectionState.Disconnected,
             null, name, null, null, null,
             configured
-                ? string.IsNullOrWhiteSpace(config.LinkedInProfileText) ? "Profile URL saved. Scan will try the public page; paste profile text if LinkedIn blocks it." : "Profile URL and fallback snapshot are saved. Scan will try to refresh from the public page."
+                ? string.IsNullOrWhiteSpace(config.LinkedInProfileText) ? "Profile URL saved. Add the LinkedIn PDF and check the URL before your first scan." : "Profile URL and latest scan are saved. Re-scan fetches the public page again."
                 : "Open LinkedIn in your browser, then save your profile URL here.");
     }
 
     public async Task<LinkedInProfile> IngestProfileAsync(CancellationToken cancellationToken = default)
     {
         var config = await _dataService.LoadConfigAsync();
-        if (!IsProfileUrl(config.LinkedInProfileUrl))
+        if (config.LinkedInLatestProfile is not null)
+            return config.LinkedInLatestProfile;
+        if (IsProfileUrl(config.LinkedInProfileUrl) && !string.IsNullOrWhiteSpace(config.LinkedInProfileText))
+            return ParseProfile(config.LinkedInProfileUrl!, config.LinkedInProfileText!);
+        throw new InvalidOperationException("Scan your LinkedIn profile first to create a profile snapshot for recommendations.");
+    }
+
+    public async Task<LinkedInProfile> CheckPublicProfileAsync(string profileUrl, CancellationToken cancellationToken = default)
+    {
+        if (!IsProfileUrl(profileUrl))
+            throw new InvalidOperationException("Enter a public LinkedIn member URL like https://www.linkedin.com/in/your-name/.");
+        return await FetchPublicProfileAsync(profileUrl, cancellationToken);
+    }
+
+    public async Task<LinkedInProfile> ScanPublicProfileAsync(string profileUrl, string? initialPdfText, bool isInitialScan, CancellationToken cancellationToken = default)
+    {
+        if (!IsProfileUrl(profileUrl))
             throw new InvalidOperationException("Save a valid LinkedIn profile URL in Connections first.");
+        if (isInitialScan && string.IsNullOrWhiteSpace(initialPdfText))
+            throw new InvalidOperationException("Import the LinkedIn Save to PDF file before your initial scan.");
+
+        var publicProfile = await FetchPublicProfileAsync(profileUrl, cancellationToken);
+        var profile = isInitialScan ? MergePublicProfileAndPdf(publicProfile, initialPdfText!) : publicProfile;
+        var config = await _dataService.LoadConfigAsync();
+        await _dataService.SaveConfigAsync(config with
+        {
+            LinkedInProfileUrl = profileUrl,
+            LinkedInProfileText = profile.SourceSnapshotText,
+            LinkedInLatestProfile = profile
+        });
+        return profile;
+    }
+
+    private async Task<LinkedInProfile> FetchPublicProfileAsync(string profileUrl, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            var requestUri = new Uri(config.LinkedInProfileUrl!);
+            var requestUri = new Uri(profileUrl);
             HttpResponseMessage? response = null;
             for (int redirect = 0; redirect <= 3; redirect++)
             {
@@ -84,26 +117,37 @@ public sealed class BrowserLinkedInProfileClient : ILinkedInClient
                  finalUri.AbsolutePath.Contains("login", StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException("LinkedIn redirected the public profile request to a sign-in page.");
 
-            var profile = ParsePublicPage(config.LinkedInProfileUrl!, html);
-            var updated = config with { LinkedInProfileText = profile.SourceSnapshotText };
-            await _dataService.SaveConfigAsync(updated);
-            return profile;
+            return ParsePublicPage(profileUrl, html);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception ex) when (!string.IsNullOrWhiteSpace(config.LinkedInProfileText))
-        {
-            return ParseProfile(config.LinkedInProfileUrl!, config.LinkedInProfileText!) with
-            {
-                SourceStatus = $"LinkedIn's public page could not be fetched ({ex.Message}). Scanned the last saved profile snapshot; paste a fresh copy to update it."
-            };
-        }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Could not read this public LinkedIn page. It may require sign-in or block direct requests. Copy the visible profile sections into Scanner and scan again.", ex);
+            throw new InvalidOperationException($"Could not read the public LinkedIn profile ({ex.Message}). Check that the profile is public and the URL is correct.", ex);
         }
+    }
+
+    private static LinkedInProfile MergePublicProfileAndPdf(LinkedInProfile publicProfile, string pdfText)
+    {
+        var pdfProfile = ParseProfile(publicProfile.CustomUrl!, pdfText);
+        var combinedText = $"{publicProfile.SourceSnapshotText}\n\n--- LinkedIn Save to PDF ---\n{pdfText}";
+        var skills = publicProfile.Skills.Concat(pdfProfile.Skills)
+            .DistinctBy(skill => skill.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        return publicProfile with
+        {
+            FullName = string.IsNullOrWhiteSpace(publicProfile.FullName) ? pdfProfile.FullName : publicProfile.FullName,
+            Headline = string.IsNullOrWhiteSpace(publicProfile.Headline) ? pdfProfile.Headline : publicProfile.Headline,
+            About = pdfProfile.About.Length > publicProfile.About.Length ? pdfProfile.About : publicProfile.About,
+            Experiences = pdfProfile.Experiences.Count > 0 ? pdfProfile.Experiences : publicProfile.Experiences,
+            Educations = pdfProfile.Educations.Count > 0 ? pdfProfile.Educations : publicProfile.Educations,
+            Skills = skills,
+            FeaturedItems = pdfProfile.FeaturedItems.Count > 0 ? pdfProfile.FeaturedItems : publicProfile.FeaturedItems,
+            RecommendationsCount = Math.Max(publicProfile.RecommendationsCount, pdfProfile.RecommendationsCount),
+            SourceSnapshotText = combinedText,
+            SourceStatus = "Initial scan combined the accessible public profile with your LinkedIn Save to PDF file."
+        };
     }
 
     public Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
@@ -111,7 +155,19 @@ public sealed class BrowserLinkedInProfileClient : ILinkedInClient
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
         var config = await _dataService.LoadConfigAsync();
-        await _dataService.SaveConfigAsync(config with { LinkedInProfileUrl = null, LinkedInProfileText = null });
+        await _dataService.SaveConfigAsync(config with
+        {
+            LinkedInProfileUrl = null,
+            LinkedInProfileText = null,
+            LinkedInPdfPath = null,
+            LinkedInPdfText = null,
+            LinkedInVerifiedProfileUrl = null,
+            LinkedInInitialProfile = null,
+            LinkedInLatestProfile = null,
+            LinkedInInitialScore = null,
+            LinkedInLastScanScore = null,
+            LinkedInLastScannedUtc = null
+        });
     }
 
     public static bool IsProfileUrl(string? value) =>

@@ -132,6 +132,7 @@ public partial class ShellViewModel : ObservableObject
         {
             if (IsGeminiConnected)
             {
+                models.Add(new ModelInfo("gemini-flash-latest", "Gemini Flash (Latest)", "Google Gemini", 1000000, 350, true));
                 models.Add(new ModelInfo("gemini-2.0-flash", "Gemini 2.0 Flash (Default)", "Google Gemini", 1000000, 400, true));
                 models.Add(new ModelInfo("gemini-2.5-flash", "Gemini 2.5 Flash (Fast)", "Google Gemini", 1000000, 350, true));
                 models.Add(new ModelInfo("gemini-1.5-pro", "Gemini 1.5 Pro (Deep Reasoning)", "Google Gemini", 2000000, 850, true));

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
+using Windows.ApplicationModel.DataTransfer;
 using LIpstick_App.ViewModels;
 
 namespace LIpstick_App.Pages;
@@ -21,5 +22,13 @@ public sealed partial class ImprovePage : Page
         {
             ViewModel.ToBeText = tb.Text;
         }
+    }
+
+    private void CopySuggestion_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        var package = new DataPackage();
+        package.SetText(ViewModel.ToBeText);
+        Clipboard.SetContent(package);
+        ViewModel.NotifySuggestionCopied();
     }
 }

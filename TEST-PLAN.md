@@ -25,16 +25,17 @@ This plan converts `SPEC.md`, the API contracts, wireframes, data files, and the
 | ST-01 | Corrupt or truncate `config.json`, `voice.md`, `plan.md`, or `history.json`, then restart. | App recovers with defaults, preserves valid records where possible, reports the affected file, and never crashes. |
 | ST-02 | Invoke Clear Local Data and cancel, then confirm. | Cancel changes nothing; confirmation removes only documented local artifacts and reports exactly what was removed. |
 
-### LinkedIn browser login and public profile scanning (issue #2)
+### LinkedIn setup, PDF import, initial scan and re-scan (issues #2 and #4)
 
 | ID | Preconditions and steps | Expected result |
 |---|---|---|
 | LI-01 | Click Open LinkedIn Login on a Windows desktop. | The default browser opens `https://www.linkedin.com/login`; browser credential management remains in control. |
-| LI-02 | Enter valid and invalid profile URLs and restart the app. | Only LinkedIn member URLs are accepted and valid URLs persist locally. |
-| LI-03 | Scan one publicly accessible profile URL. | The app makes one unauthenticated request, parses available public metadata/sections, evaluates them, and retains source text without invented identity fields. |
-| LI-04 | Block the public request or return an incomplete page; provide pasted profile text and scan. | The app uses the local fallback and explains whether the result came from public HTML or pasted text. |
-| LI-05 | Inspect requests, app config, and secure storage. | No LinkedIn password, cookie, browser token, or bulk request is sent; profile URL and cached text remain local. |
-| LI-06 | Trigger Apply on a recommendation. | LIpstick never claims to write to LinkedIn; user is told to apply manually and rescan a fresh snapshot. |
+| LI-02 | Enter valid and invalid member URLs, click **CHECK**, and restart. | Only valid LinkedIn member URLs are accepted; URL persists; CHECK reports readable content or a clear failure. |
+| LI-03 | Import a LinkedIn Save to PDF fixture and run the first scan with public HTML. | PDF text and public content are combined with provenance, and profile/score are stored as the initial baseline. |
+| LI-04 | Change the public HTML fixture after the initial scan and select **Re-scan**. | A fresh page is fetched, initial PDF content is absent from current result, baseline is retained, and score delta is shown. |
+| LI-05 | Inspect requests, app config, and secure storage. | No LinkedIn password, cookie, browser token, or batch request is sent; URL and local profile/PDF text persist. |
+| LI-06 | Open Improve with an AI provider configured, then copy a passing suggestion. | Suggestion is generated from scanned content; copy works; LIpstick does not write LinkedIn; user applies edits manually. |
+| LI-07 | Return inaccessible, sign-in-wall, or rate-limited responses. | An actionable error is shown; no stale scan is presented as fresh and no access-control bypass is attempted. |
 
 ### AI providers and generation (issue #3)
 

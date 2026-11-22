@@ -13,6 +13,7 @@ public partial class App : Application
 {
     private Window? _window;
     public static IServiceProvider Services { get; private set; } = null!;
+    public static Window? MainWindow { get; private set; }
 
     public App()
     {
@@ -33,7 +34,8 @@ public partial class App : Application
         // Infrastructure
         services.AddSingleton<ISecureStorageService, DpapiSecureStorageService>();
         services.AddSingleton<ILocalDataService, LocalDataService>();
-        services.AddSingleton<ILinkedInClient>(sp => new BrowserLinkedInProfileClient(sp.GetRequiredService<ILocalDataService>()));
+        services.AddSingleton(sp => new BrowserLinkedInProfileClient(sp.GetRequiredService<ILocalDataService>()));
+        services.AddSingleton<ILinkedInClient>(sp => sp.GetRequiredService<BrowserLinkedInProfileClient>());
         services.AddSingleton<ILinkedInSyncWorker, LinkedInSyncWorker>();
 
         // AI Providers & Hub
@@ -59,6 +61,7 @@ public partial class App : Application
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         _window = new MainWindow();
+        MainWindow = _window;
         _window.Activate();
     }
 }

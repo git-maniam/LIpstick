@@ -56,11 +56,12 @@ namespace LIpstick.Core.Interfaces;
 
 public interface ILinkedInClient
 {
-    Task<LinkedInSessionInfo> ConnectAsync(CancellationToken cancellationToken = default); // Opens default browser login.
-    Task<LinkedInSessionInfo> GetSessionInfoAsync(CancellationToken cancellationToken = default); // Reports profile setup, not browser auth.
-    Task<LinkedInProfile> IngestProfileAsync(CancellationToken cancellationToken = default); // Parses user-provided local snapshot.
+    Task<LinkedInSessionInfo> ConnectAsync(CancellationToken cancellationToken = default); // Opens default browser login shortcut only.
+    Task<LinkedInSessionInfo> GetSessionInfoAsync(CancellationToken cancellationToken = default); // Reports saved profile setup, not browser auth.
+    Task<LinkedInProfile> IngestProfileAsync(CancellationToken cancellationToken = default); // Returns the latest saved scan.
 }
 ```
-- LinkedIn passwords and browser sessions remain in the browser and are inaccessible to LIpstick.
-- Each explicit scan makes one unauthenticated request to the saved public profile URL; no cookies or bulk requests are sent. Parsed text is cached locally; pasted text is the fallback if direct access is blocked or incomplete.
-- No browser automation or profile write API calls are used. Recommendations are applied manually by the user.
+- Connections persists a public member URL and provides a **CHECK** action that makes one unauthenticated request to verify readable content.
+- The initial scan requires a locally selected LinkedIn Save to PDF file, fetches the checked public URL, merges the available sources, and saves the initial profile/score baseline.
+- Each later Re-scan fetches the public URL again and evaluates fresh public content only; it retains the initial baseline for comparison and does not reuse the PDF.
+- No LinkedIn password, cookie, or browser token is accessed. No access-control bypass or profile write calls are used. Recommendations are applied manually by the user.
